@@ -1,11 +1,11 @@
 ---
 name: laravel-app-builder
-description: Autonomously build a complete, working Laravel application — Filament admin panel plus Inertia + React (shadcn/ui) frontend — from a plain-language description of features. Use this skill whenever the user describes an app or website they want built and mentions Laravel, Filament, Inertia, React, or asks for a web app with an admin panel, even if they only give a rough feature list. It handles requirements analysis, ERD design, migrations, models, Actions, admin resources, frontend pages, tests, and an automated build-verify-fix loop that runs until the app actually works. Also use it when the user asks to add a major feature to an existing Laravel + Filament project, or says things like "buatkan aplikasi", "build me an app", "bikin website dengan fitur X".
+description: Autonomously build a complete, working Laravel application — Filament admin panel plus Inertia + React (shadcn/ui) frontend — from a plain-language description of features. Use this skill whenever the user describes an app or website they want built and mentions Laravel, Filament, Inertia, React, or asks for a web app with an admin panel, even if they only give a rough feature list. It handles requirements analysis, a PRD, ERD and workflow/state-machine design, migrations, models, Actions, admin resources, frontend pages, tests, an automated build-verify-fix loop that runs until the app actually works, optional fan-out to builder/reviewer/QA subagents for wide waves, and a production preflight covering queues, secrets, security and observability before handover. Also use it when the user asks to add a major feature to an existing Laravel + Filament project, or says things like "buatkan aplikasi", "build me an app", "bikin website dengan fitur X".
 ---
 
 # Laravel App Builder
 
-Turn a feature description into a running application, with as few round trips to the user as possible.
+Turn a feature description into a running, production-ready application, with as few round trips to the user as possible.
 
 The philosophy: **do not ask the user questions they cannot answer better than you can decide.** Most people describing an app know the features, not the schema. Design the schema yourself, show it once, then build. Every question asked is a round trip that could have been an inference.
 
@@ -63,11 +63,19 @@ If a registration command fails (no `claude` CLI, sandboxed environment, Windows
 
 Read `references/requirements-to-erd.md` before this phase.
 
+**First decide the shape of the app**, because it changes what you produce:
+
+- **Catalogue-shaped** — records are created, edited, displayed; nothing moves between people. A travel site, a company profile, a product catalogue.
+- **Process-shaped** — one record moves through several roles in sequence and the allowed actions depend on where it is. A restaurant order (diner scans QR → kitchen → cashier → diner watches status), a delivery, an approval flow, a booking with payment.
+
+The test: *do two or more roles act on the same record, in order?* If yes, read `references/workflow-modeling.md` — the ERD alone cannot carry that design, and building from it produces several screens that each write a `status` column with no agreement on what the values mean.
+
 From the user's description, produce and write to `docs/`:
 
-1. `docs/spec.md` — actors and roles, entity list, feature list broken into vertical slices, explicit out-of-scope list.
+1. `docs/prd.md` — the problem, actor table (device, auth, what they need to do), success criteria as observable conditions, entity list, slices, explicit out-of-scope list, open risks.
 2. `docs/erd.md` — Mermaid ER diagram with every table, column, type, nullability, and relationship.
-3. `docs/plan.md` — ordered build slices, each with its acceptance criteria.
+3. `docs/workflows.md` — **process-shaped apps only.** Actor map, a Mermaid sequence diagram per journey, a state machine per stateful entity with its transition table (from, to, Action class, who may trigger it, guard), and an events/realtime table with an explicit push-versus-poll decision and a fallback for each. Write this *before* finalising the ERD — modelling the lifecycle reliably surfaces tables the entity list missed.
+4. `docs/plan.md` — ordered build slices, each with its acceptance criteria.
 
 Infer aggressively. If the user says "travel umroh with packages, hotels, and WhatsApp booking," you already know there is a `packages` table, a `hotels` table, a pivot or itinerary relation, media for galleries, and no payment system unless stated. Do not ask about soft deletes, timestamps, slug fields, or seeders — decide them.
 
@@ -80,7 +88,7 @@ If the user's description already answers one, do not ask it.
 
 ## Phase 2 — The single gate
 
-Show the ERD and the slice plan. Ask one question:
+Show the ERD, the workflow diagrams if there are any, and the slice plan. Ask one question:
 
 > Ini rencananya. Ada yang salah atau kurang sebelum aku bangun?
 
@@ -99,7 +107,7 @@ npx shadcn@latest init
 npx shadcn@latest add button card dialog form input select
 ```
 
-Build **slice by slice**, not layer by layer. A slice is one feature complete from database to UI. Finishing slices means the app is always in a demonstrable state; finishing layers means nothing works until the end.
+Build **slice by slice**, not layer by layer. For process-shaped apps, follow the slice ordering in `references/workflow-modeling.md`: the state machine is built and fully tested *before any UI exists*, because it is the application and the screens are only windows onto it. A slice is one feature complete from database to UI. Finishing slices means the app is always in a demonstrable state; finishing layers means nothing works until the end.
 
 Per slice:
 
@@ -111,9 +119,25 @@ Per slice:
 6. `bash "$SKILL_DIR/scripts/verify.sh"` — from the project root
 7. If verify fails: read the actual error output, fix, re-run. Do not proceed to the next slice with a red build.
 
+When a fix lands after two or more failed attempts, append the lesson to `docs/lessons.md` right then — while the error text is still in context. Reconstructing it at handover produces a vague summary of a specific problem, which is the least useful form. Format and criteria are in `references/self-improvement.md`.
+
 Loop budget: up to **6 fix attempts per slice**. On the 6th consecutive failure, stop and report — the error text, what was tried, and what is suspected. Silently looping on an unsolvable problem burns the user's tokens and time. A stuck loop is information, not a failure to hide.
 
 Between slices, commit: `git add -A && git commit -m "feat: <slice>"`. Frequent commits give the user a rollback point, which is what makes autonomous building safe to allow.
+
+### Running it as a team
+
+Serial is the default and is correct for most projects. When `docs/plan.md` contains a wave of three or more slices that touch **disjoint tables and disjoint components**, delegate that wave instead of building it yourself. Read `references/orchestration.md` before doing so — it defines what makes slices independent, why waves 0 and 1 are always serial, and how migration timestamps collide across worktrees.
+
+The shape:
+
+- one `laravel-slice-builder` subagent per independent slice, each with `isolation: "worktree"`
+- one `laravel-slice-reviewer` per completed slice, given the diff and **not** the builder's explanation
+- one `laravel-qa-verifier` on the merged tree at the end of the wave
+
+Agent definitions live in `agents/` in this repository; copy them to `.claude/agents/` to use them. Without them the same roles still work — spawn general subagents and paste the role's instructions into the prompt.
+
+Say what you are about to do before fanning out. N builders cost roughly N times the tokens, and that is the user's money.
 
 ## Phase 4 — Integration verification
 
@@ -127,14 +151,36 @@ Then, if Playwright is available, walk the primary user journey in a real browse
 
 Seed demo data so the app is not an empty shell when the user opens it.
 
-## Phase 5 — Handover
+## Phase 5 — Production preflight
+
+`verify.sh` proves the app runs. It says nothing about what happens when it runs unattended, for a stranger, on a machine you cannot see. Read `references/production-readiness.md`, then:
+
+```bash
+bash "$SKILL_DIR/scripts/preflight-prod.sh"
+```
+
+It exits 1 on a blocker. The blockers it finds are the ones that turn a launch into an incident: `APP_DEBUG=true` leaking credentials on every error page, `QUEUE_CONNECTION=sync` running jobs inside the request, `canAccessPanel()` missing so the panel 403s in production, Telescope recording every request.
+
+Some things cannot be checked from the repository — TLS, cron running the scheduler, Supervisor keeping workers alive, backups that have actually been restored. The script lists them. **Report them as unverified, never as done.**
+
+## Phase 6 — Handover
 
 Write `README.md` with setup steps, admin credentials, and the seeded demo accounts. Then report to the user:
 
 - What was built, by slice
 - What was deliberately left out and why
 - Anything that failed verification and remains broken — state this first and plainly, never bury it
+- Production readiness: what is done, what the user must still provide, what could not be verified from here
 - The next three things worth doing
+
+Then curate what this build taught. Lessons were appended to `docs/lessons.md` as they happened; move the ones that generalise beyond this project into `docs/lessons-promote.md` and run:
+
+```bash
+bash "$SKILL_DIR/scripts/learn.sh"            # shows what would change
+bash "$SKILL_DIR/scripts/learn.sh" --apply    # only after the user has seen it
+```
+
+Read `references/self-improvement.md` for what qualifies. Writing to the skill changes behaviour for every future project, so it never happens without the user seeing the diff first.
 
 **Never report an app as complete when the verify script is red.** An honest "8 of 10 slices work, checkout is failing on X" is far more useful than a green summary the user discovers is false when they open the browser.
 
@@ -145,17 +191,23 @@ Autonomous does not mean unconstrained. These hold regardless of what the loop i
 - **No destructive commands without asking**: no `migrate:fresh` on a database with real data, no `rm -rf`, no force-push, no writing outside the project directory.
 - **No secrets in code or commits.** Generate `.env.example`; never commit `.env`.
 - **No fabricated APIs.** If unsure whether a Filament or Inertia method exists in the installed version, check via Boost's docs search or the real docs. Inventing a plausible-looking method call is the most common way an autonomous build produces code that looks right and does not run.
-- **No scope creep.** Build what is in `docs/spec.md`. If a good idea surfaces mid-build, append it to `docs/backlog.md` and keep going.
+- **No scope creep.** Build what is in `docs/prd.md`. If a good idea surfaces mid-build, append it to `docs/backlog.md` and keep going.
+- **The documents stay true.** When the implementation contradicts `docs/prd.md`, `docs/erd.md`, or `docs/workflows.md` — a transition that turns out to be impossible, a column that had to change — update the document in the same commit as the code and add one line to `docs/decisions.md`. A diagram that no longer matches the code is worse than no diagram, because the next reader trusts it.
 
 ## Reference files
 
 | File | Read when |
 |---|---|
-| `references/requirements-to-erd.md` | Phase 1 — turning prose into schema |
+| `references/requirements-to-erd.md` | Phase 1 — turning prose into a PRD and a schema |
+| `references/workflow-modeling.md` | Phase 1 — whenever two or more roles act on the same record in sequence |
 | `references/architecture.md` | Before generating any code — the layering contract |
 | `references/filament.md` | Building admin resources |
 | `references/inertia-react.md` | Building frontend pages |
 | `references/autonomy-loop.md` | Phase 3 — loop mechanics, failure handling, stop conditions |
+| `references/orchestration.md` | Phase 3 — before delegating a wave to subagents |
+| `references/production-readiness.md` | Phase 5 — the gap between "it runs" and "it is live" |
+| `references/self-improvement.md` | Phase 6 — recording and promoting what the build taught |
+| `references/learned.md` | Start of a build — lessons promoted from earlier projects |
 
 ## Communication
 

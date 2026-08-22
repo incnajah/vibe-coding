@@ -58,7 +58,7 @@ Not aspirational. These are cheap when built in and expensive to retrofit.
 - **Labels on every input.** `<FormField>` handles this; nothing should bypass it.
 - **Color is never the only signal.** Errors get an icon or text, not just red. Roughly one in twelve men cannot reliably distinguish it.
 - **Contrast** — 4.5:1 for body text, 3:1 for large text and UI boundaries. Muted-gray-on-white placeholder text usually fails; check before shipping it.
-- **Touch targets** at least 44×44px. An icon button that is visually 20px needs padding to reach it.
+- **Target size.** WCAG 2.2 SC 2.5.8 (level AA) sets the floor at **24×24 CSS px**, with an exception when adjacent targets are at least 24px apart. SC 2.5.5 (level AAA) asks for 44×44. 24 is a floor, not a goal — Apple's guidance is 44pt and Material's is 48dp, so **use 44×44 for anything touched on a phone** and treat 24 as the absolute minimum for dense desktop toolbars. An icon button that is visually 20px needs padding to reach either number.
 - **Keyboard traps** — modals trap focus while open and return it to the trigger on close.
 - **`alt` on every image.** Decorative images get `alt=""`, not a missing attribute.
 - **Reduced motion respected:**

@@ -32,26 +32,53 @@ Only decisions that are expensive to reverse *and* cannot be inferred from conte
 
 Ask at most these three, in one message, and skip any the description already answers. A description mentioning "customers can track their booking" has already answered #3.
 
-## Output 1 — docs/spec.md
+## First: is this a catalogue or a process?
+
+Before writing anything, decide which shape the app is. It changes what documents you produce.
+
+**Catalogue-shaped** — records are created, edited, and displayed. Nothing moves between people. A travel site, a portfolio, a company profile, a product catalogue.
+
+**Process-shaped** — one record moves through several roles in sequence, and what you may do to it depends on where it is. A restaurant order (diner → kitchen → cashier), a delivery, a ticketing system, an approval flow, a booking with confirmation and payment.
+
+The test: *do two or more roles act on the same record, in order?* If yes, the ERD alone will not carry the design, and you must read `workflow-modeling.md` and produce `docs/workflows.md` as well. Skipping that step on a process app is the single most expensive mistake available in this phase — it surfaces as four screens that each set a `status` column with no agreement on what the values mean.
+
+## Output 1 — docs/prd.md
 
 ```markdown
-# <App> — Specification
+# <App> — Product Requirements
+
+## Problem
+One paragraph: what is broken today, for whom. Not the solution.
+
 ## Actors
-- Guest: browses, contacts via WhatsApp
-- Admin: manages all content
+| Actor | Device | Auth | What they need to do |
+|---|---|---|---|
+
+## Success criteria
+Observable conditions that mean v1 worked. Not tasks.
+- A diner can order without installing anything or creating an account
+- The kitchen never misses a ticket
 
 ## Entities
 | Entity | Purpose | Key fields |
 |---|---|---|
+
+## Workflows          (process-shaped apps only)
+Pointer to docs/workflows.md, plus one line per journey.
 
 ## Slices (build order)
 1. <slice> — acceptance: <observable condition>
 
 ## Out of scope (v1)
 - <thing>: <why>
+
+## Open risks
+- <thing that could invalidate the plan, and what would settle it>
 ```
 
 The out-of-scope list is not filler. It is what stops the build from expanding indefinitely and what the user reads when they wonder why payments are missing.
+
+Success criteria phrased as observable conditions are what the verification loop checks against. "Build ordering" cannot fail. "A diner can order without creating an account" can.
 
 ## Output 2 — docs/erd.md
 
@@ -92,7 +119,13 @@ Rules that prevent predictable pain:
 - Anything user-facing and addressable gets a unique `slug`.
 - Pivot tables carrying data (`nights`, `sort_order`) get their own model.
 
-## Output 3 — docs/plan.md
+## Output 3 — docs/workflows.md (process-shaped apps only)
+
+Actor map, a sequence diagram per journey, a state machine per stateful entity with its transition table, and an events/realtime table. Full guidance and the failure modes it prevents are in `workflow-modeling.md`.
+
+Produce this **before** finalising the ERD. Modelling the order lifecycle usually reveals columns and tables the entity list missed — a payments table separate from orders, a transition history, a table session distinct from a table.
+
+## Output 4 — docs/plan.md
 
 Slices ordered so that each one leaves the app demonstrable. Each needs an acceptance criterion phrased as something observable, not as a task.
 
@@ -102,6 +135,10 @@ Good: "Admin can create a package with photos and departures; it appears on `/pa
 The difference matters because the acceptance criterion is what the verification loop checks against. A criterion that cannot fail is not a criterion.
 
 ## Slice ordering
+
+For process-shaped apps use the ordering in `workflow-modeling.md` instead — the state machine is built and tested before any UI exists, because it is the application and the screens are only windows onto it.
+
+For catalogue-shaped apps:
 
 1. Auth + admin panel shell (everything depends on it)
 2. Core entity, end to end (proves the whole vertical works)

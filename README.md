@@ -1,523 +1,515 @@
-# Claude Skills — Laravel + Filament + Inertia React
+# Claude Skills — Bikin Aplikasi Laravel Cukup dengan Ngomong
 
-Dua skill yang bikin Claude bisa membangun aplikasi Laravel lengkap dari deskripsi fitur, lalu menjaga UI-nya tetap konsisten sampai file ke-dua ratus.
+Kamu cerita mau bikin aplikasi apa dan fiturnya apa saja. Claude yang mengerjakan: bikin database, halaman admin, halaman website, sampai testing — lalu mengecek sendiri hasilnya sampai benar-benar jalan.
 
-Tiga skill ada di repo ini. **Pasang dua, jangan tiga.** Alasannya di [bagian bawah](#kenapa-skill-ketiga-jangan-dipasang-bersamaan).
+Repo ini isinya "skill" — semacam **buku petunjuk yang dibaca Claude** supaya dia tahu cara mengerjakannya dengan benar dan konsisten.
 
 ---
 
 ## Daftar isi
 
-- [Isi repo](#isi-repo)
-- [Prasyarat](#prasyarat)
-- [Cara pasang](#cara-pasang)
-- [Memastikan skill terpasang](#memastikan-skill-terpasang)
-- [Cara pakai — alur lengkap](#cara-pakai--alur-lengkap)
-- [Contoh kasus lengkap: website travel umroh](#contoh-kasus-lengkap-website-travel-umroh)
-- [Referensi script](#referensi-script)
-- [Troubleshooting](#troubleshooting)
-- [Kenapa skill ketiga jangan dipasang bersamaan](#kenapa-skill-ketiga-jangan-dipasang-bersamaan)
-- [Batasan yang jujur](#batasan-yang-jujur)
+1. [Ini sebenarnya apa?](#1-ini-sebenarnya-apa)
+2. [Yang harus ada di komputermu](#2-yang-harus-ada-di-komputermu)
+3. [Cara pasang (5 menit)](#3-cara-pasang-5-menit)
+4. [Cek sudah terpasang atau belum](#4-cek-sudah-terpasang-atau-belum)
+5. [Cara pakai — 6 langkah](#5-cara-pakai--6-langkah)
+6. [Contoh nyata dari nol sampai jadi](#6-contoh-nyata-dari-nol-sampai-jadi)
+7. [Kalau error](#7-kalau-error)
+8. [Fitur lanjutan](#8-fitur-lanjutan)
+9. [Buku manual script](#9-buku-manual-script)
+10. [Yang belum sempurna](#10-yang-belum-sempurna)
 
 ---
 
-## Isi repo
+## 1. Ini sebenarnya apa?
 
-```
-claude-skills-laravel/
-├── laravel-app-builder.skill      ← pasang ini
-├── ui-design-system.skill         ← pasang ini
-├── laravel-filament-inertia.skill ← JANGAN pasang bersama dua di atas
-│
-├── install-these/                 (versi folder — sumber yang bisa diedit)
-│   ├── laravel-app-builder/
-│   │   ├── SKILL.md
-│   │   ├── references/            (5 file, dibaca sesuai fase)
-│   │   └── scripts/               bootstrap.sh, verify.sh
-│   └── ui-design-system/
-│       ├── SKILL.md
-│       ├── references/            (4 file)
-│       └── scripts/               audit-ui.sh
-└── optional-superseded/
-    └── laravel-filament-inertia/
-```
+Bayangkan kamu punya pegawai programmer. Kalau kamu bilang *"bikinin website travel umroh"*, dia perlu tahu:
 
-File `.skill` adalah arsip zip siap pasang untuk aplikasi Claude. Folder di `install-these/` adalah sumbernya — **edit di situ**, lalu pasang ulang foldernya (atau kemas ulang `.skill`-nya).
+- Cara kerja perusahaanmu
+- Standar penulisan kode yang dipakai
+- Harus tes apa saja sebelum bilang "selesai"
 
-### Apa beda kedua skill utama
+**Skill = buku petunjuk itu.** Kamu kasih ke Claude sekali, lalu setiap kali kamu minta bikin aplikasi, dia sudah tahu caranya.
 
-| | `laravel-app-builder` | `ui-design-system` |
+### Ada tiga skill di sini. Pasang dua saja.
+
+| Skill | Gunanya | Pasang? |
 |---|---|---|
-| Tugas | Bangun aplikasi dari deskripsi fitur | Jaga UI tetap konsisten |
-| Kapan aktif | Kamu minta dibuatkan app / tambah fitur besar | Kamu bangun atau rapikan UI |
-| Butuh terminal | **Ya** | Tidak (kecuali `audit-ui.sh`) |
-| Output | Spec, ERD, migrasi, model, Action, Filament, halaman React, test | Token, primitives, patterns, audit drift |
+| `laravel-app-builder` | Bikin aplikasi dari cerita fiturmu | ✅ Ya |
+| `ui-design-system` | Bikin tampilan rapi dan seragam | ✅ Ya |
+| `laravel-filament-inertia` | Versi lama dari yang pertama | ❌ Jangan |
 
-Keduanya berdiri sendiri. Kamu boleh pasang salah satu saja.
+Kenapa yang ketiga jangan? Karena isinya sudah dilebur ke yang pertama. Kalau dua-duanya dipasang, Claude bingung mau pakai yang mana, dan hasilnya jadi tidak menentu. Penjelasan lengkap ada di [bagian 8](#kenapa-skill-ketiga-jangan-dipasang).
 
----
+### Istilah yang akan sering muncul
 
-## Prasyarat
+Baca sekali, nanti tidak bingung:
 
-| | Minimal | Cek |
-|---|---|---|
-| PHP | 8.2+ | `php -v` |
-| Composer | 2.x | `composer -V` |
-| Node | 18+ | `node -v` |
-| npm | 9+ | `npm -v` |
-| git | apa saja | `git --version` |
-
-Untuk MCP (opsional tapi sangat disarankan): **Claude Code CLI**, cek dengan `claude --version`.
-
-Script ditulis untuk **bash** + coreutils GNU/BSD. Jalan di Linux, macOS, WSL, dan Git Bash di Windows. Belum diuji di PowerShell murni.
-
-Baseline yang diasumsikan (pertengahan 2026): Laravel 13.x, Filament v4 & v5, Inertia v2, Tailwind v4. Script tetap **memeriksa versi terpasang**, bukan berasumsi.
+| Istilah | Artinya dengan bahasa manusia |
+|---|---|
+| **Laravel** | Kerangka kerja untuk bikin website. Seperti rangka mobil — kamu tinggal pasang bodinya |
+| **Filament** | Halaman admin yang sudah jadi. Tempat kamu menambah/mengedit data |
+| **React** | Yang bikin halaman depan (yang dilihat pengunjung) terasa cepat |
+| **Database** | Tempat semua data disimpan. Bayangkan Excel raksasa |
+| **ERD** | Gambar yang menunjukkan tabel-tabel database dan hubungannya |
+| **Migrasi** | Perintah untuk membuat tabel di database |
+| **Slice** | Satu fitur utuh, dari database sampai tampilan. Dikerjakan satu per satu |
+| **Terminal** | Layar hitam tempat mengetik perintah. Di Windows: buka **Git Bash** |
 
 ---
 
-## Cara pasang
+## 2. Yang harus ada di komputermu
 
-### A. Claude Code — untuk semua project (paling umum)
+Lima program. Cek dulu, jangan asal install ulang.
+
+**Buka terminal**, lalu ketik satu per satu:
+
+```bash
+php -v          # butuh 8.2 atau lebih baru
+composer -V     # butuh versi 2
+node -v         # butuh 18 atau lebih baru
+npm -v
+git --version
+```
+
+Kalau salah satu bilang `command not found`, berarti belum terpasang:
+
+| Belum ada | Install dari |
+|---|---|
+| PHP | [Laravel Herd](https://herd.laravel.com) (paling gampang, Windows & Mac) atau XAMPP |
+| Composer | [getcomposer.org/download](https://getcomposer.org/download/) |
+| Node + npm | [nodejs.org](https://nodejs.org) — pilih versi **LTS** |
+| Git | [git-scm.com](https://git-scm.com) |
+
+> **Pengguna Windows:** semua perintah di dokumen ini dijalankan di **Git Bash**, bukan Command Prompt dan bukan PowerShell. Git Bash otomatis ikut terpasang bersama Git. Cari "Git Bash" di menu Start.
+
+Satu lagi yang **sangat disarankan** tapi tidak wajib: **Claude Code CLI**. Ini yang membuat Claude bisa melihat isi database dan membuka browser sungguhan untuk mengecek hasil kerjanya. Cek dengan `claude --version`.
+
+---
+
+## 3. Cara pasang (5 menit)
+
+### Kalau kamu pakai Claude Code (di terminal)
+
+Copy-paste blok ini, jalankan sekaligus:
 
 ```bash
 git clone https://github.com/incnajah/vibe-coding.git
 cd vibe-coding
-
 mkdir -p ~/.claude/skills
 cp -r claude-skills-laravel/install-these/laravel-app-builder ~/.claude/skills/
 cp -r claude-skills-laravel/install-these/ui-design-system    ~/.claude/skills/
 ```
 
-### B. Claude Code — hanya untuk satu project
+Selesai. Skill sekarang aktif di **semua** project.
 
-Taruh di `.claude/skills/` di dalam project, dan commit ke repo project supaya seluruh tim ikut memakainya:
+Mau pakai agent tambahan juga? (Penjelasan di [bagian 8](#8-fitur-lanjutan) — boleh dilewati dulu.)
 
 ```bash
-mkdir -p .claude/skills
-cp -r /path/ke/vibe-coding/claude-skills-laravel/install-these/laravel-app-builder .claude/skills/
-cp -r /path/ke/vibe-coding/claude-skills-laravel/install-these/ui-design-system    .claude/skills/
+mkdir -p ~/.claude/agents
+cp claude-skills-laravel/agents/*.md ~/.claude/agents/
 ```
 
-Kalau nama sama ada di dua tempat, versi project menang.
+### Kalau kamu pakai claude.ai atau aplikasi Claude
 
-### C. Claude.ai / aplikasi desktop Claude
-
-Buka file `.skill`-nya, lalu klik **Save skill**:
+Buka dua file ini, lalu klik tombol **Save skill**:
 
 - `claude-skills-laravel/laravel-app-builder.skill`
 - `claude-skills-laravel/ui-design-system.skill`
 
-Catatan penting: di chat claude.ai tidak ada terminal, jadi `laravel-app-builder` **tidak bisa** menjalankan loop build. Dia akan bilang begitu terus terang, lalu tetap menghasilkan spec, ERD, dan file kode yang bisa kamu salin. Untuk build otomatis sungguhan, pakai Claude Code atau Cowork.
-
-### Kalau kamu mengedit skill-nya
-
-Setelah mengubah isi `install-these/`, salin ulang foldernya. Untuk mengemas ulang `.skill`:
-
-```bash
-cd claude-skills-laravel/install-these
-zip -r ../laravel-app-builder.skill laravel-app-builder
-zip -r ../ui-design-system.skill    ui-design-system
-```
-
-Struktur di dalam zip harus punya satu folder di akar yang berisi `SKILL.md`.
+> ⚠️ **Penting:** di chat claude.ai tidak ada terminal. Claude tetap bisa bikin rencana, ERD, dan file kode untuk kamu salin — tapi dia **tidak bisa** menjalankan dan mengetes aplikasinya sendiri. Untuk yang otomatis penuh, pakai Claude Code.
 
 ---
 
-## Memastikan skill terpasang
+## 4. Cek sudah terpasang atau belum
 
 ```bash
 ls ~/.claude/skills/
-# laravel-app-builder  ui-design-system
 ```
 
-Di dalam sesi Claude Code, ketik `/` — skill yang terpasang muncul di daftar. Skill juga aktif otomatis lewat deskripsinya, jadi kamu tidak wajib memanggilnya dengan nama.
+Harusnya muncul:
 
-Kalau tidak muncul: pastikan setiap folder berisi `SKILL.md` **langsung di dalamnya** (bukan bersarang satu tingkat lagi), lalu mulai sesi Claude Code yang baru.
+```
+laravel-app-builder  ui-design-system
+```
+
+Kalau kosong atau kurang, ulangi langkah 3.
+
+**Masih tidak terdeteksi Claude?** Pastikan struktur foldernya begini — file `SKILL.md` harus langsung di dalam foldernya, tidak bersarang lebih dalam:
+
+```
+~/.claude/skills/laravel-app-builder/SKILL.md   ← benar
+~/.claude/skills/laravel-app-builder/laravel-app-builder/SKILL.md   ← salah
+```
+
+Lalu tutup sesi Claude Code dan buka baru.
 
 ---
 
-## Cara pakai — alur lengkap
+## 5. Cara pakai — 6 langkah
 
-Delapan langkah. Yang bertanda **kamu** butuh tindakanmu; sisanya dikerjakan Claude.
+### Langkah 1 — Siapkan project
 
-```
-1. bootstrap.sh              → stack + MCP siap
-2. cd ke PROJECT_ROOT        ← kamu
-3. npx shadcn@latest init    ← kamu (interaktif, sekali saja)
-4. deskripsikan fitur        ← kamu
-5. review ERD                ← kamu (satu-satunya gate wajib)
-6. arah visual → token       → ui-design-system
-7. build loop per slice      → verify.sh tiap slice
-8. audit-ui.sh sebelum commit
-```
-
-### Langkah 1 — bootstrap
-
-Script tinggal **di dalam folder skill**, bukan di dalam project. Waktu build, direktori kerja adalah project, jadi `bash scripts/bootstrap.sh` tidak akan ketemu. Selalu pakai path skill-nya:
+Buat folder kosong, masuk ke sana, jalankan satu perintah ini:
 
 ```bash
 SKILL_DIR=~/.claude/skills/laravel-app-builder
 bash "$SKILL_DIR/scripts/bootstrap.sh" travel-umroh
 ```
 
-Script ini idempoten — aman diulang. Baris terakhir yang dicetak:
+Ganti `travel-umroh` dengan nama projectmu.
+
+**Apa yang terjadi:** program ini memasang semua bahan yang dibutuhkan — Laravel, halaman admin, React, database, alat testing. Butuh 5–15 menit tergantung internet. Biarkan saja jalan.
+
+> **Kenapa harus pakai `$SKILL_DIR`?** Karena file `bootstrap.sh` ada di folder skill, bukan di folder projectmu. Kalau kamu ketik `bash scripts/bootstrap.sh` saja, komputer tidak akan menemukannya.
+
+Di baris paling akhir akan muncul:
 
 ```
 PROJECT_ROOT=/home/kamu/travel-umroh
 ```
 
-### Langkah 2 — masuk ke project
-
-`bootstrap.sh` berjalan di proses terpisah, jadi dia **tidak bisa** mengubah direktori kerja shell-mu. Kamu harus pindah sendiri:
+### Langkah 2 — Masuk ke folder project
 
 ```bash
 cd travel-umroh
 ```
 
-Semua perintah setelah ini dijalankan dari sini.
+**Ini wajib.** Semua perintah setelah ini harus dijalankan dari dalam folder project.
 
-### Langkah 3 — shadcn/ui
-
-Sengaja tidak dijalankan otomatis: prompt-nya interaktif dan akan menggantung loop otonom.
+### Langkah 3 — Pasang komponen tampilan
 
 ```bash
 npx shadcn@latest init
-npx shadcn@latest add button card dialog form input select
 ```
 
-Tambahkan komponen seperlunya saja. `add` tiga puluh komponen sekaligus berarti tiga puluh file yang harus dirawat.
+Program ini akan bertanya beberapa hal — jawab saja dengan Enter (pilihan bawaannya sudah benar). Cukup sekali seumur project.
 
-### Langkah 4 — deskripsikan fiturnya
+> Kenapa tidak otomatis? Karena dia bertanya, dan pertanyaan akan membuat proses otomatis Claude berhenti menggantung menunggu jawaban yang tidak pernah datang.
 
-Cukup bahasa biasa. Jangan repot menyusun schema — itu justru tugas skill-nya.
+### Langkah 4 — Ceritakan mau bikin apa
 
-> Website travel umroh. Ada paket umroh, destinasi, muthowif, hotel, harga per tanggal keberangkatan, album foto, dan tombol WhatsApp langsung ke admin.
+Sekarang buka Claude Code di folder ini, dan **ngomong biasa saja**. Tidak perlu istilah teknis:
 
-Claude akan menghasilkan tiga file di `docs/`:
+> Website travel umroh. Ada paket umroh, destinasi, muthowif, hotel, harga beda-beda per tanggal berangkat, album foto, dan tombol WhatsApp langsung ke admin.
 
-| File | Isi |
+Claude akan membuat dokumen perencanaan di folder `docs/`:
+
+| File | Isinya |
 |---|---|
-| `docs/spec.md` | aktor, entitas, daftar fitur per slice, daftar out-of-scope |
-| `docs/erd.md` | diagram Mermaid: semua tabel, kolom, tipe, nullability, relasi |
-| `docs/plan.md` | urutan slice + kriteria penerimaan tiap slice |
+| `docs/prd.md` | Masalah yang dipecahkan, siapa penggunanya, tolok ukur sukses, apa yang **tidak** dibuat |
+| `docs/erd.md` | Gambar tabel database dan hubungannya |
+| `docs/workflows.md` | **Hanya kalau aplikasimu berupa alur kerja.** Siapa melakukan apa, urutannya, dan status yang boleh berpindah ke mana |
+| `docs/plan.md` | Urutan pengerjaan, fitur per fitur |
 
-Dia akan **menyimpulkan sendiri** hal-hal seperti soft delete, slug, timestamp, dan SEO field — tanpa bertanya. Yang ditanyakan maksimal tiga, dan hanya yang mahal kalau salah:
+**Kapan `workflows.md` dibuat?** Kalau satu data berpindah tangan antar beberapa orang secara berurutan.
 
-1. Uang — cuma tampil harga, atau ada pembayaran online sungguhan?
-2. Multi-tenancy — satu organisasi atau banyak dengan data terpisah?
-3. Akun pengunjung — publik perlu registrasi, atau cukup brosur + tombol kontak?
+- *Website travel* → tidak perlu. Data paket cuma ditambah dan ditampilkan.
+- *Aplikasi resto dengan QR per meja* → **perlu.** Satu pesanan bergerak dari pelanggan → koki → kasir → balik ke pelanggan. Yang penting bukan tabelnya, tapi perpindahannya.
 
-Kalau deskripsimu sudah menjawab salah satunya, dia tidak akan menanyakannya lagi.
+Kalau langkah ini dilewati pada aplikasi jenis kedua, hasilnya empat halaman yang sama-sama mengubah kolom `status` tanpa kesepakatan apa arti nilainya — dan itu baru terasa setelah semuanya terlanjur dibangun.
 
-### Langkah 5 — gate ERD
+Dia akan **menebak sendiri** hal-hal teknis (kolom tanggal, tempat foto, alamat halaman) tanpa bertanya. Yang ditanyakan **maksimal 3**, dan hanya yang mahal kalau salah:
 
-Ini **satu-satunya berhenti wajib**. Claude menampilkan ERD dan rencana slice, lalu bertanya sekali:
+1. Ada pembayaran online, atau cuma tampil harga?
+2. Satu perusahaan saja, atau banyak perusahaan dengan data terpisah?
+3. Pengunjung perlu daftar akun, atau cukup lihat-lihat lalu chat WhatsApp?
+
+### Langkah 5 — Periksa ERD-nya (INI PENTING)
+
+Claude akan menunjukkan gambar database dan bertanya sekali:
 
 > Ini rencananya. Ada yang salah atau kurang sebelum aku bangun?
 
-Baca ERD-nya. Dua menit di sini menghemat berjam-jam rework, karena schema yang salah menjalar ke migrasi, model, Action, resource Filament, dan halaman React sekaligus.
+**Baca beneran.** Ini satu-satunya tempat berhenti. Kalau strukturnya salah dan baru ketahuan nanti, perbaikannya berjam-jam. Kalau ketahuan sekarang, dua menit.
 
-Kalau kamu memang tidak mau ditanya, bilang **"langsung saja"** atau **"one shot"** di prompt awal — gate-nya dilewati, ERD tetap ditulis ke disk, dan build jalan terus.
+Kamu tidak perlu paham teknisnya. Cukup cek dari sisi bisnis:
 
-### Langkah 6 — arah visual jadi token
+- Semua yang mau kamu simpan sudah ada tabelnya?
+- Hubungannya masuk akal? (Contoh: *satu paket bisa punya banyak tanggal berangkat* — benar?)
+- Ada yang kelebihan atau kurang?
 
-Tentukan dulu arah estetiknya (pakai skill `frontend-design` kalau tersedia, atau sepakati sendiri warna dan tipografinya). Lalu `ui-design-system` menerjemahkannya jadi token di `resources/css/app.css`:
+Jawab pakai bahasa biasa: *"muthowif bisa lebih dari satu per paket"* — Claude akan memperbaiki ERD-nya lalu lanjut.
 
-```css
-@theme {
-  --color-primary:       oklch(0.55 0.18 255);
-  --color-primary-fg:    oklch(0.99 0 0);
-  --color-surface:       oklch(1 0 0);
-  --color-surface-muted: oklch(0.97 0.005 260);
-  --color-content:       oklch(0.22 0.01 260);
-  --color-danger:        oklch(0.58 0.20 25);
-}
+> **Buru-buru?** Bilang **"langsung saja"** atau **"jangan tanya-tanya"** di pesan pertama. Gate ini dilewati dan dia langsung mengerjakan.
+
+### Langkah 6 — Tunggu dan pantau
+
+Claude mengerjakan **satu fitur sampai tuntas**, baru pindah ke fitur berikutnya. Jadi aplikasi selalu dalam kondisi bisa dilihat, tidak menunggu semuanya selesai dulu.
+
+Kamu akan lihat laporan seperti ini:
+
+```
+✓ Slice 1/6 — Login + halaman admin
+✓ Slice 2/6 — Paket umroh: database, admin, halaman /paket, 11 tes lulus
+▸ Slice 3/6 — Tanggal keberangkatan & harga
 ```
 
-Nama **peran**, bukan nama warna. `--color-danger` selamat dari rebranding; `--color-red-500` jadi kebohongan begitu brand-nya berubah, dan tidak ada yang berani mengganti namanya karena sudah dipakai di sembilan puluh file.
+Setiap fitur selesai, dia mengetes sendiri. Kalau gagal, dia baca errornya dan perbaiki — sampai 6 kali percobaan. Kalau tetap gagal, **dia berhenti dan cerita apa masalahnya**, tidak berpura-pura sudah selesai.
 
-Lakukan ini **sebelum** membangun komponen. Fitur pertama bikin tombolnya sendiri, fitur kedua bikin yang mirip tapi beda, dan di fitur kelima tidak ada lagi sistem yang bisa dipasang surut.
-
-### Langkah 7 — loop build
-
-Claude membangun **slice demi slice**, bukan layer demi layer. Satu slice = satu fitur utuh dari database sampai UI. Artinya aplikasi selalu dalam keadaan bisa didemokan; kalau per-layer, tidak ada yang jalan sampai akhir.
-
-Per slice:
-
-1. Migration + model + factory + seeder
-2. Action class berisi business logic
-3. Test Pest terhadap Action — **ditulis sebelum UI**
-4. Filament resource
-5. Inertia controller + halaman React
-6. `bash "$SKILL_DIR/scripts/verify.sh"`
-7. Kalau gagal: baca error sungguhan, perbaiki, ulangi
-
-Batas loop **6 percobaan per slice**. Di kegagalan ke-6 dia berhenti dan melapor — teks error, apa saja yang sudah dicoba, dan dugaan penyebabnya. Loop yang diam-diam berputar di masalah tak terpecahkan cuma membakar waktu dan token.
-
-Tiap slice yang lulus di-commit sendiri, jadi kamu punya titik rollback per fitur.
-
-### Langkah 8 — audit sebelum commit
+Kalau semua sudah beres, jalankan pemeriksaan siap-produksi:
 
 ```bash
-SKILL_DIR=~/.claude/skills/ui-design-system
-bash "$SKILL_DIR/scripts/audit-ui.sh"
+bash "$SKILL_DIR/scripts/preflight-prod.sh"
 ```
 
-Exit 1 kalau ada temuan HIGH, jadi bisa langsung dipasang sebagai gate CI.
+Ini mengecek hal-hal yang bikin aplikasi celaka setelah online — misalnya mode debug masih menyala (bocorin password ke pengunjung) atau antrian pekerjaan belum disetel.
 
 ---
 
-## Contoh kasus lengkap: website travel umroh
+## 6. Contoh nyata dari nol sampai jadi
 
-Skenario nyata dari awal sampai serah terima.
-
-### 1. Bootstrap
+Semua yang kamu ketik, berurutan:
 
 ```bash
+# 1. Siapkan
+mkdir ~/projects && cd ~/projects
 SKILL_DIR=~/.claude/skills/laravel-app-builder
 bash "$SKILL_DIR/scripts/bootstrap.sh" travel-umroh
 cd travel-umroh
 npx shadcn@latest init
+
+# 2. Buka Claude Code di sini
+claude
 ```
 
-Yang barusan terpasang: Laravel + Filament panel + Inertia/React/TypeScript + Tailwind v4 + Ziggy + Media Library + Pest + Larastan + Debugbar, SQLite sudah siap, Inertia sudah **benar-benar terhubung** (middleware terdaftar di `bootstrap/app.php`, `app.blade.php`, `app.tsx`, `vite.config.js`, `tsconfig.json`), `git init` + commit pertama, dan MCP terdaftar.
-
-Kalau ada yang gagal, script mencetak blok **Degraded capabilities** — misalnya Playwright tidak terdaftar, artinya verifikasi cuma lewat test, bukan browser sungguhan. Dia tidak menyembunyikannya.
-
-### 2. Deskripsi
+Lalu di dalam Claude, kamu ketik:
 
 > Website travel umroh. Paket umroh, destinasi, muthowif, hotel, harga per tanggal keberangkatan, album foto, tombol WhatsApp langsung.
 
-### 3. Yang disimpulkan tanpa bertanya
+**Claude bertanya:** *"Ada pembayaran online, atau harga cuma ditampilkan?"*
 
-- `packages` jadi entitas pusat; sisanya menggantung padanya
-- "harga" bukan atribut paket, tapi milik tabel `departures` — harga variatif per tanggal itu hampir universal di bisnis ini
-- "album foto" = media polimorfik lewat Media Library, bukan tabel berisi path gambar
-- WhatsApp = generator link dengan template pesan, bukan integrasi messaging
-- Admin perlu auth; pengunjung tidak
-- Tiap entitas konten dapat `slug`, `is_published`, `sort_order`, timestamps, soft delete
-- Field SEO di semua yang punya URL publik
+**Kamu jawab:** *"Cuma ditampilkan, pesan lewat WhatsApp."*
 
-Yang **ditanyakan** cuma: pembayaran online atau tidak. (Jawab "tidak, cukup WhatsApp" → tidak ada tabel `orders`, `payments`, `invoices`.)
-
-### 4. ERD yang muncul di gate
-
-```mermaid
-erDiagram
-    PACKAGES ||--o{ DEPARTURES : has
-    PACKAGES }o--|| MUTHOWIFS : guided_by
-    PACKAGES }o--o{ HOTELS : stays_at
-    PACKAGES }o--o{ DESTINATIONS : visits
-
-    PACKAGES {
-        id bigint PK
-        slug string UK
-        name string
-        description text
-        duration_days tinyint
-        base_price decimal_15_2
-        is_published boolean
-        published_at timestamp NULL
-        deleted_at timestamp NULL
-    }
-    DEPARTURES {
-        id bigint PK
-        package_id bigint FK
-        departs_on date
-        price decimal_15_2
-        seats_total smallint
-        seats_taken smallint
-    }
-```
-
-Uang selalu `decimal(15,2)` atau integer satuan terkecil — **tidak pernah** `float`. Tiap FK dapat index dan perilaku `onDelete` yang eksplisit.
-
-Kamu jawab misalnya: *"muthowif bisa lebih dari satu per paket"* → ERD direvisi jadi many-to-many, baru build jalan.
-
-### 5. Slice yang dibangun
+**Claude menampilkan ERD.** Isinya kira-kira:
 
 ```
-✓ Slice 1/6 — Auth + admin panel shell
-✓ Slice 2/6 — Packages: migration, model, 4 Actions, 11 tests, Filament resource, /paket + detail
-✓ Slice 3/6 — Departures: harga & kursi per tanggal, relation manager
-✓ Slice 4/6 — Muthowif, hotel, destinasi + pivot
-✓ Slice 5/6 — Galeri foto (Media Library) + tombol WhatsApp
-▸ Slice 6/6 — SEO, sitemap, halaman 404
+PAKET ──punya banyak──> TANGGAL_BERANGKAT (tanggal, harga, sisa kursi)
+PAKET ──dipandu──> MUTHOWIF
+PAKET ──menginap di──> HOTEL
+PAKET ──mengunjungi──> DESTINASI
 ```
 
-Business logic tidak pernah tinggal di dalam Filament resource maupun controller. Keduanya cuma pemanggil tipis:
+**Kamu baca**, lalu bilang: *"Muthowif-nya bisa lebih dari satu per paket."*
 
-```php
-final class PublishPackage
-{
-    public function __construct(private CacheRepository $cache) {}
+**Claude memperbaiki**, lalu mulai mengerjakan. Setelah selesai kamu dapat:
 
-    public function handle(Package $package): Package
-    {
-        $package->update(['published_at' => now()]);
-        $this->cache->forget('packages.published');
-        PackagePublished::dispatch($package);
+- Halaman admin di `/admin` — tempat menambah paket, upload foto, atur harga
+- Halaman publik di `/paket` — daftar paket yang bisa dilihat pengunjung
+- Tombol WhatsApp yang langsung membuka chat dengan pesan otomatis
+- Data contoh sudah terisi, jadi tidak kosong melompong saat dibuka
+- File `README.md` di dalam project berisi cara menjalankan + username & password admin
 
-        return $package->fresh();
-    }
-}
-```
-
-Filament memanggilnya:
-
-```php
-Action::make('publish')
-    ->requiresConfirmation()
-    ->action(fn (Package $record, PublishPackage $publish) => $publish->handle($record));
-```
-
-Kenapa penting: publish harus menstempel `published_at`, membersihkan cache, dan mengirim notifikasi — urutan yang sama persis, mau dipicu dari admin atau dari controller. Kalau logikanya ditaruh di dalam resource, pemanggil kedua diam-diam mengerjakan lebih sedikit. Bug jenis ini tidak melempar error; dia cuma menghasilkan data yang salah.
-
-### 6. Saat verify gagal
-
-```
-▸ Tests
-  ✗ pest
-
-VERIFY FAILED: pest
-Fix the FIRST failure above, then re-run. Do not start the next slice.
-```
-
-Claude membaca error sungguhan (`storage/logs/laravel.log`, `php artisan tinker`, atau MCP laravel-boost untuk melihat schema live), memperbaiki, lalu mengulang. **Kegagalan pertama saja** yang dibaca — kegagalan verifikasi itu beruntun, dan "memperbaiki" keempatnya berarti tiga perubahan spekulatif pada kode yang sebetulnya tidak rusak.
-
-Kalau error yang sama muncul tiga kali meski perbaikannya berbeda, itu tanda diagnosisnya yang salah, bukan patch-nya yang kurang variasi.
-
-### 7. Serah terima
+Buka aplikasinya:
 
 ```bash
-bash "$SKILL_DIR/scripts/verify.sh" --full
+php artisan serve
 ```
 
-Lalu `README.md` project ditulis lengkap dengan langkah setup, kredensial admin, dan akun demo yang sudah di-seed. Laporan akhirnya menyebut apa yang dibangun per slice, apa yang sengaja tidak dibangun, **apa yang masih rusak** (disebut pertama, tidak pernah dikubur), dan tiga hal berikutnya yang layak dikerjakan.
+Lalu buka `http://localhost:8000` di browser.
 
-Aplikasi tidak pernah dilaporkan selesai kalau `verify.sh` masih merah. "8 dari 10 slice jalan, checkout gagal di X" jauh lebih berguna daripada ringkasan hijau yang ketahuan bohong begitu kamu buka browser.
+### Contoh kedua: aplikasi resto yang lebih rumit
+
+Kamu ketik:
+
+> Aplikasi web resto di mall. Tiap meja ada QR code, pelanggan scan lalu pesan sendiri. Pesanan langsung masuk ke layar koki dan ke kasir. Pelanggan bisa lihat status pesanannya.
+
+Ini beda jenis dari contoh travel tadi. Di sini **satu pesanan berpindah tangan**: pelanggan → koki → kasir → balik ke pelanggan. Jadi Claude membuat `docs/workflows.md` juga, isinya:
+
+**Siapa pakai apa:**
+
+| Pelaku | Alat | Login | Sinyal |
+|---|---|---|---|
+| Pelanggan | HP sendiri, scan QR | tidak login — pakai token meja | wifi mall, sering putus |
+| Koki | layar dapur | terikat perangkat | kabel |
+| Kasir | mesin kasir | PIN | kabel |
+| Pemilik | laptop | password | di mana saja |
+
+**Perjalanan status pesanan:**
+
+```
+draft ──pesan──> placed ──koki terima──> confirmed ──> cooking ──> ready
+                    │                        │
+                    └──koki tolak──> rejected└──manajer batalkan──> cancelled
+
+ready ──diantar──> served ──dibayar──> settled
+```
+
+Setiap panah menjadi **satu perintah tersendiri** dengan aturan siapa yang boleh menjalankannya. Bukan satu tombol "ubah status" yang bisa dipakai siapa saja untuk mengisi apa saja — itu cara paling cepat merusak data.
+
+**Dan Claude memutuskan hal-hal yang tidak kamu sebutkan tapi pasti bermasalah:**
+
+- Pelanggan tap tombol "Pesan" dua kali karena wifi lambat → tanpa pengaman jadi dua pesanan. Diberi pengaman.
+- Layar dapur menyala 9 jam, koneksinya putus di jam ke-3 → harus otomatis nyambung lagi, kalau tidak layarnya diam-diam berhenti update.
+- QR meja bisa difoto dan dipakai besok → tokennya dibatasi hanya selama meja itu terbuka.
+- Koki menandai "siap" bersamaan dengan kasir menutup tagihan → dikunci supaya tidak saling menimpa.
+
+**Urutan pengerjaannya juga beda.** Untuk aplikasi seperti ini, Claude membangun dan **mengetes seluruh perpindahan status dulu, sebelum ada tampilan sama sekali**. Alasannya: perpindahan status itulah aplikasinya; layar cuma jendela untuk melihatnya. Salah di sana setelah 4 layar jadi, berarti benerin 4 layar.
+
+**Dokumennya ikut diperbarui.** Kalau di tengah jalan ternyata ada perpindahan status yang mustahil, Claude memperbaiki `docs/workflows.md` bersamaan dengan kodenya, dan mencatat alasannya di `docs/decisions.md`. Diagram yang tidak lagi cocok dengan kode lebih berbahaya daripada tidak ada diagram, karena orang berikutnya percaya begitu saja.
 
 ---
 
-## Referensi script
+## 7. Kalau error
 
-### `bootstrap.sh`
+Cari gejalanya di kolom kiri.
+
+| Yang muncul di layar | Artinya | Cara benerin |
+|---|---|---|
+| `No such file or directory` saat menjalankan script | Salah alamat file | Pakai `$SKILL_DIR` seperti di contoh, jangan `bash scripts/...` |
+| `verify.sh must run from the Laravel project root` | Kamu belum masuk ke folder project | `cd nama-project` dulu |
+| `bad interpreter: ...^M` | File rusak karena format baris Windows | `sed -i 's/\r$//' namafile.sh` |
+| `missing required tools: composer` | Ada program yang belum terpasang | Lihat [bagian 2](#2-yang-harus-ada-di-komputermu) |
+| `no usable test runner` | Alat testing belum siap | `vendor/bin/pest --init` |
+| Halaman `/admin` bilang **403** | Akun kamu belum diizinkan masuk panel | Claude harus menambahkan `canAccessPanel()` di model User |
+| Tampilan admin berantakan setelah upload ke server | Aset belum dibangun ulang | Jalankan `php artisan filament:assets` di server |
+| `Port 8899 already in use` | Port sedang dipakai program lain | `VERIFY_PORT=9000 bash "$SKILL_DIR/scripts/verify.sh" --full` |
+| `npm error ERESOLVE` | Versi paket bentrok | `bootstrap.sh` versi terbaru sudah menanganinya — pastikan kamu pakai yang terbaru |
+
+**Aturan umum kalau bingung:** copy seluruh pesan error, tempel ke Claude, dan bilang *"ini errornya, tolong perbaiki"*. Dia memang dirancang untuk membaca error sungguhan, bukan menebak.
+
+---
+
+## 8. Fitur lanjutan
+
+Boleh dilewati kalau baru mulai.
+
+### Claude bisa kerja seperti tim, bukan satu orang
+
+Kalau ada 3 fitur atau lebih yang **tidak saling bersentuhan**, Claude bisa membagi kerja ke beberapa "pegawai" sekaligus:
+
+| Peran | Tugas |
+|---|---|
+| **Lead** | Bikin rencana, bagi tugas, gabungkan hasil, ngobrol denganmu |
+| **Builder** | Kerjakan satu fitur, masing-masing di ruang kerja terpisah |
+| **Reviewer** | Periksa hasil builder — **tanpa** diberi tahu alasan si builder |
+| **QA** | Tes hasil gabungan: jalankan tes, buka browser sungguhan, baca error |
+
+Reviewer sengaja tidak diberi penjelasan builder. Kalau dia tahu alasannya, dia cuma mengecek "apakah kode cocok dengan cerita" — bukan "apakah ceritanya benar".
+
+Pasang agent-nya:
+
+```bash
+mkdir -p ~/.claude/agents
+cp claude-skills-laravel/agents/*.md ~/.claude/agents/
+```
+
+> ⚠️ Kerja paralel memakai token beberapa kali lipat. Claude akan memberi tahu sebelum melakukannya. Untuk project kecil, satu agent saja lebih hemat dan sama bagusnya.
+
+### Claude belajar dari kesalahannya
+
+Setiap kali ada kesalahan yang butuh 2 kali percobaan atau lebih, Claude mencatatnya di `docs/lessons.md` di dalam projectmu.
+
+Di akhir pekerjaan, pelajaran yang **berlaku umum** (bukan cuma untuk project ini) bisa dinaikkan ke dalam skill-nya sendiri:
+
+```bash
+bash "$SKILL_DIR/scripts/learn.sh"          # lihat dulu apa yang mau ditambahkan
+bash "$SKILL_DIR/scripts/learn.sh" --apply  # baru simpan
+```
+
+Kenapa dua langkah? Karena menulis ke skill mengubah perilaku Claude di **semua** project berikutnya, selamanya. Itu bukan hal yang boleh terjadi diam-diam. Kamu harus lihat dulu apa yang mau ditambahkan.
+
+Batasnya 40 catatan. Lewat dari itu, menambah berarti membuang yang lama — bukan menumpuk. Catatan yang terlalu banyak justru menenggelamkan panduan yang sudah bagus.
+
+### Kenapa skill ketiga jangan dipasang
+
+`laravel-filament-inertia` adalah versi pertama. Isinya sudah dipindah ke dalam `laravel-app-builder`.
+
+Masalahnya: keduanya sama-sama mengaku ahli "Laravel + Filament + Inertia". Kalau dua-duanya aktif, Claude kadang pakai yang satu, kadang yang lain, kadang dua-duanya sekaligus lalu mengulang-ulang hal yang sama.
+
+Pasang dia **hanya kalau** kamu cuma mau nasihat arsitektur, tanpa mesin pembangun otomatis. Pilih salah satu.
+
+---
+
+## 9. Buku manual script
+
+### `bootstrap.sh` — menyiapkan project baru
 
 ```bash
 bash "$SKILL_DIR/scripts/bootstrap.sh" [nama-project]
 ```
 
-| | |
-|---|---|
-| Argumen | nama project. Boleh dikosongkan **hanya** kalau sudah ada `./artisan` di direktori sekarang |
-| Idempoten | ya — tiap langkah dilewati kalau sudah ada |
-| Output penting | baris terakhir `PROJECT_ROOT=…`, dan blok **Degraded capabilities** kalau ada yang gagal |
-| Exit 1 | ada prasyarat yang hilang (dilaporkan sekaligus, bukan satu per satu) |
+- Aman dijalankan berkali-kali. Yang sudah ada dilewati.
+- Nama project boleh dikosongkan **hanya** kalau kamu sudah di dalam project Laravel.
+- Baris terakhir mencetak `PROJECT_ROOT=...` — itu folder yang harus kamu masuki.
+- Kalau ada yang gagal dipasang, dia mencetak daftar **Degraded capabilities** — jujur, tidak disembunyikan.
+- Tidak menjalankan `npx shadcn init` (karena bertanya-tanya dan akan menggantung proses otomatis).
 
-Yang **tidak** dijalankan: `npx shadcn@latest init` (interaktif) dan `php artisan boost:install` versi interaktif (akan menggantung loop otonom). Keduanya dicetak sebagai perintah untuk kamu jalankan.
-
-### `verify.sh`
+### `verify.sh` — mengecek aplikasi masih waras
 
 ```bash
 bash "$SKILL_DIR/scripts/verify.sh" [--full]
 ```
 
-Dijalankan **dari root project**, bukan dari folder skill. Kalau tidak ada `./artisan`, dia berhenti dengan exit 2.
+Harus dijalankan **dari dalam folder project**.
 
-| Cek | Kapan |
+| Diperiksa | Kapan |
 |---|---|
-| PHP syntax (`app`, `database`, `routes`, `tests`) | selalu |
-| Migrasi jalan | selalu |
-| Route resolve | selalu |
-| Pest / PHPUnit | selalu |
-| Vite build | selalu |
-| PHPStan (advisory, tidak memblokir) | `--full` |
-| `filament:optimize` | `--full` |
-| Smoke HTTP `/` dan `/admin/login` | `--full` |
+| Kode PHP tidak salah ketik | selalu |
+| Database bisa dibuat | selalu |
+| Semua alamat halaman terdaftar | selalu |
+| Tes lulus | selalu |
+| Tampilan bisa dibangun | selalu |
+| Analisa kode mendalam | `--full` |
+| Halaman `/` dan `/admin/login` benar-benar terbuka | `--full` |
 
-| Exit | Arti |
-|---|---|
-| 0 | lulus |
-| 1 | ada yang gagal — nama kegagalannya disebut |
-| 2 | salah pemakaian (bukan di root project, atau argumen tidak dikenal) |
+Kode keluar: `0` lulus, `1` ada yang gagal, `2` salah cara pakai.
 
-Server dev untuk smoke test dimatikan bersih lewat `trap`, termasuk kalau script-nya diinterupsi — jadi port-nya tidak nyangkut ke run berikutnya. Ganti portnya dengan `VERIFY_PORT=9000` kalau 8899 bentrok.
-
-### `audit-ui.sh`
+### `audit-ui.sh` — mengecek tampilan tetap seragam
 
 ```bash
-bash "$SKILL_DIR/scripts/audit-ui.sh" [source-dir] [css-dir]
+bash ~/.claude/skills/ui-design-system/scripts/audit-ui.sh [folder-kode] [folder-css]
 ```
 
-Default: `resources/js` dan `resources/css`.
+Bawaan: `resources/js` dan `resources/css`.
 
-| Temuan | Peringkat |
-|---|---|
-| Hex mentah di komponen | HIGH |
-| Warna Tailwind arbitrary (`bg-[#3b82f6]`) | HIGH |
-| `focus:outline-none` tanpa `focus-visible` pengganti | HIGH |
-| `<div onClick>` | HIGH |
-| Komponen duplikat / lebih dari satu Button | HIGH |
-| Tidak ada blok `@theme` sama sekali | HIGH |
-| Warna inline style, spacing/font arbitrary, z-index arbitrary | MED |
-| `<img>` tanpa `alt`, `<button>` mentah di luar `ui/` | MED |
-| Token bernama literal (`--color-blue-500`) | MED |
-| Skala spacing terlalu lebar, `dark:` sedikit | LOW |
+Mencari hal-hal yang bikin tampilan pelan-pelan jadi berantakan: warna ditulis manual, ukuran asal-asalan, tombol yang tidak bisa dipakai lewat keyboard, gambar tanpa keterangan, komponen kembar.
 
-Exit 1 kalau ada HIGH. Contoh pemakaian di CI:
+Hasilnya diberi peringkat **HIGH / MED / LOW**. Kode keluar `1` kalau ada HIGH.
 
-```yaml
-- name: Design system audit
-  run: bash .claude/skills/ui-design-system/scripts/audit-ui.sh
-```
+### `preflight-prod.sh` — mengecek siap online atau belum
 
----
-
-## Troubleshooting
-
-**`bash: scripts/bootstrap.sh: No such file or directory`**
-Path relatif tidak akan pernah resolve — direktori kerja adalah project, script-nya ada di folder skill. Pakai `SKILL_DIR`. Cari lokasinya kalau ragu:
 ```bash
-ls -d ~/.claude/skills/laravel-app-builder .claude/skills/laravel-app-builder 2>/dev/null
+bash "$SKILL_DIR/scripts/preflight-prod.sh"
 ```
 
-**`bad interpreter: /usr/bin/env bash^M`**
-Script kena konversi CRLF. Repo ini memasang `.gitattributes` yang mengunci `*.sh` ke LF, jadi seharusnya tidak terjadi. Kalau terlanjur: `sed -i 's/\r$//' script.sh`.
+Mencari masalah yang baru terasa **setelah** aplikasi online:
 
-**`verify.sh must run from the Laravel project root`**
-Kamu masih di direktori induk. `cd` ke `PROJECT_ROOT` yang dicetak `bootstrap.sh`.
+- Mode debug masih menyala → halaman error membocorkan password database ke siapa pun
+- Antrian pekerjaan belum disetel → kirim email jadi bagian dari loading halaman
+- `.env` (file berisi semua password) ikut masuk ke Git
+- Panel admin akan 403 di server
+- Belum ada pemantau error → kamu baru tahu rusak dari komplain klien
 
-**`no usable test runner (pest needs tests/Pest.php)`**
-`bootstrap.sh` menjalankan `pest --init`, tapi kalau gagal jalankan sendiri: `vendor/bin/pest --init`.
+Yang **tidak bisa** dicek dari sini (sertifikat HTTPS, backup, penjadwal di server) dia sebutkan sebagai *belum diperiksa* — bukan dianggap beres.
 
-**403 di `/admin` waktu produksi**
-`canAccessPanel()` belum diimplementasikan di model `User`. Ini bukan bug Filament — tanpa itu, panel diblokir di luar environment `local`.
+### `learn.sh` — menyimpan pelajaran ke dalam skill
 
-**Style Filament rusak setelah deploy**
-`php artisan filament:assets` belum jalan di pipeline deploy, atau CSS aplikasi ikut dimasukkan ke panel. Filament dan frontend punya build Tailwind sendiri-sendiri dan **tidak boleh** digabung — preset-nya berbeda dan akan saling merusak.
-
-**Port 8899 sudah dipakai**
-`VERIFY_PORT=9000 bash "$SKILL_DIR/scripts/verify.sh" --full`
-
-**MCP tidak terdaftar**
-Butuh Claude Code CLI. Cek `claude mcp list`. Kehilangan Playwright berarti verifikasi hanya lewat test; kehilangan laravel-boost berarti API harus dicek ke dokumentasi, bukan ke aplikasi yang berjalan. Keduanya melambatkan, tidak mematikan.
+```bash
+bash "$SKILL_DIR/scripts/learn.sh"          # lihat saja
+bash "$SKILL_DIR/scripts/learn.sh" --apply  # simpan
+```
 
 ---
 
-## Kenapa skill ketiga jangan dipasang bersamaan
+## 10. Yang belum sempurna
 
-`laravel-filament-inertia` adalah versi pertama, dan isinya sudah dilebur ke `laravel-app-builder/references/architecture.md`. Deskripsi trigger-nya sudah dipersempit jadi "guidance saja, tanpa build loop", tapi cakupan stack-nya tetap sama persis.
+Ditulis apa adanya. Lebih baik kamu tahu sekarang daripada kaget nanti.
 
-Kalau keduanya aktif, triggering jadi tidak bisa diprediksi: kadang yang satu, kadang yang lain, kadang keduanya masuk konteks dan saling mengulang.
+<!-- STATUS-E2E -->
 
-Pasang dia **hanya** kalau kamu mau panduan arsitektur ringan tanpa mesin build otonom. Pilih salah satu.
+- **Belum diuji di PowerShell atau Command Prompt.** Semua script ditulis untuk bash. Di Windows pakai **Git Bash** (ikut terpasang bersama Git) atau WSL. Ini bukan rencana untuk diperbaiki — Git Bash sudah ada di setiap komputer yang punya Git.
+
+- **Skill tidak memasang MCP diam-diam.** MCP adalah kemampuan tambahan yang membuat Claude bisa melihat isi database dan membuka browser. `bootstrap.sh` menjalankan perintah pemasangannya secara terbuka dan melaporkan mana yang gagal — dia tidak mengubah setelan komputermu tanpa memberitahu.
+
+- **Skill tidak memasang skill lain.** Keduanya berdiri sendiri. Yang benar-benar menambahkan panduan tambahan ke dalam project adalah `php artisan boost:install`, dan itu berjalan di dalam projectmu saja.
+
+- **`ui-design-system` mengurus keteraturan, bukan selera.** Dia memastikan tampilan konsisten dan bisa diakses semua orang. Dia **tidak** menentukan aplikasimu cantik atau tidak. Untuk arah visual, tentukan sendiri atau pakai skill desain terpisah.
+
+- **Claude tetap bisa salah.** Skill ini membuat dia lebih jarang salah dan lebih jujur saat salah — bukan tidak pernah salah. Gate ERD di langkah 5 ada justru karena itu. Baca ERD-nya.
 
 ---
 
-## Batasan yang jujur
+## Lisensi & kontribusi
 
-- **Bagian instalasi paket di `bootstrap.sh` belum pernah dijalankan end-to-end** di environment dengan PHP + Composer lengkap. Logika preflight, patch `bootstrap/app.php` (diuji pada bentuk Laravel 11 dan 12), serta `verify.sh` dan `audit-ui.sh` sudah diuji. Jalankan sekali di direktori kosong sebelum kamu andalkan.
-- Belum diuji di PowerShell murni — pakai Git Bash atau WSL di Windows.
-- Skill **tidak** memasang MCP diam-diam. `bootstrap.sh` menjalankan perintahnya dan melaporkan mana yang gagal.
-- Skill **tidak** memasang skill lain. Keduanya self-contained. Yang benar-benar mem-publish skill tambahan ke dalam project adalah `php artisan boost:install`.
-- `ui-design-system` mengurus **sistem**, bukan selera. Untuk arah estetik pakai skill desain seperti `frontend-design` kalau tersedia; skill ini merujuk ke sana dan tidak menggantikannya.
+Silakan pakai, ubah, dan sebarkan. Kalau kamu menemukan bug atau punya perbaikan, buka issue atau pull request di [github.com/incnajah/vibe-coding](https://github.com/incnajah/vibe-coding).

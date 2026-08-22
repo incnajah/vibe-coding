@@ -14,6 +14,11 @@
 
 set -uo pipefail
 
+# Every child inherits EOF on stdin. Any tool that decides to prompt then fails
+# immediately instead of hanging forever, which is the difference between a
+# visible error and an autonomous run that stops dead with no output.
+exec </dev/null
+
 PROJECT="${1:-}"
 log()  { printf '\n\033[1;34m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m[!]\033[0m %s\n' "$*"; }
@@ -44,7 +49,7 @@ if [ -f artisan ]; then
 else
   [ -n "$PROJECT" ] || { warn "no artisan found and no project name given"; exit 1; }
   log "Creating Laravel project: $PROJECT"
-  composer create-project laravel/laravel "$PROJECT" || exit 1
+  composer create-project --no-interaction laravel/laravel "$PROJECT" || exit 1
   cd "$PROJECT" || exit 1
 fi
 PROJECT_ROOT="$(pwd)"
@@ -64,9 +69,9 @@ fi
 
 # ------------------------------------------------------------------ packages
 log "Installing composer packages"
-composer require filament/filament spatie/laravel-medialibrary inertiajs/inertia-laravel tightenco/ziggy \
+composer require --no-interaction filament/filament spatie/laravel-medialibrary inertiajs/inertia-laravel tightenco/ziggy \
   || warn "composer require partially failed — check the output above before continuing"
-composer require --dev --with-all-dependencies \
+composer require --dev --no-interaction --with-all-dependencies \
   laravel/boost pestphp/pest pestphp/pest-plugin-laravel larastan/larastan barryvdh/laravel-debugbar \
   || warn "dev packages partially failed"
 
@@ -135,8 +140,38 @@ fi
 # ------------------------------------------------------ inertia client side
 log "Wiring Inertia + React + Tailwind (client side)"
 npm install @inertiajs/react react react-dom ziggy-js || warn "npm install failed"
-npm install -D @vitejs/plugin-react typescript @types/react @types/react-dom \
-  tailwindcss @tailwindcss/vite || warn "npm dev install failed"
+
+# The Laravel skeleton pins a vite major, and the newest @vitejs/plugin-react
+# usually requires the *next* one. npm fails the entire `install -D` on that peer
+# conflict, which silently takes typescript and tailwind down with it — the build
+# then fails much later, far from the cause. Pick the newest plugin release whose
+# peer range accepts the vite that is actually installed.
+REACT_PLUGIN="@vitejs/plugin-react"
+VITE_MAJOR="$(node -p "require('./node_modules/vite/package.json').version.split('.')[0]" 2>/dev/null)"
+[ -n "$VITE_MAJOR" ] || VITE_MAJOR="$(node -p "((require('./package.json').devDependencies||{}).vite||'').replace(/[^0-9.]/g,'').split('.')[0]" 2>/dev/null)"
+if [ -n "$VITE_MAJOR" ]; then
+  PICKED="$(npm view "@vitejs/plugin-react@>=4" --json version peerDependencies.vite 2>/dev/null \
+    | node -e '
+        let s = "";
+        process.stdin.on("data", d => (s += d)).on("end", () => {
+          const want = "^" + process.argv[1] + ".";
+          let list;
+          try { list = JSON.parse(s) } catch { return }
+          if (!Array.isArray(list)) list = [list];
+          const ok = list.filter(v => String(v["peerDependencies.vite"] || "").includes(want));
+          if (ok.length) process.stdout.write(ok[ok.length - 1].version);
+        })' "$VITE_MAJOR" 2>/dev/null)"
+  [ -n "$PICKED" ] && REACT_PLUGIN="@vitejs/plugin-react@$PICKED"
+fi
+ok "react plugin: ${REACT_PLUGIN} (vite major ${VITE_MAJOR:-unknown})"
+
+DEV_PKGS=("$REACT_PLUGIN" typescript @types/react @types/react-dom tailwindcss @tailwindcss/vite)
+if ! npm install -D "${DEV_PKGS[@]}"; then
+  warn "batch dev install failed — retrying one package at a time so one bad peer does not block the rest"
+  for pkg in "${DEV_PKGS[@]}"; do
+    npm install -D "$pkg" >/dev/null 2>&1 || warn "npm install -D $pkg failed"
+  done
+fi
 
 mkdir -p resources/js/Pages resources/js/Layouts resources/js/components/ui \
          resources/js/lib resources/css
@@ -236,9 +271,20 @@ fi
 
 # ------------------------------------------------------------- test + static
 log "Configuring test and analysis tooling"
+# `vendor/bin/pest --init` prompts, and a prompt in an autonomous run is a hang.
+# tests/Pest.php is three lines and fully determined by the Laravel skeleton, so
+# write it rather than asking a wizard for it.
 if [ -f vendor/bin/pest ] && [ ! -f tests/Pest.php ]; then
-  vendor/bin/pest --init >/dev/null 2>&1 && ok "pest initialised" \
-    || warn "pest --init failed — vendor/bin/pest will not run until tests/Pest.php exists"
+  mkdir -p tests
+  cat > tests/Pest.php <<'PEST'
+<?php
+
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+uses(TestCase::class, RefreshDatabase::class)->in('Feature');
+PEST
+  ok "tests/Pest.php created"
 fi
 
 if [ ! -f phpstan.neon ] && [ ! -f phpstan.neon.dist ]; then
@@ -261,7 +307,7 @@ log "Registering MCP servers"
 # and semantic search over Laravel ecosystem docs. Highest-value server here.
 if php artisan list 2>/dev/null | grep -q 'boost:install'; then
   # Never fall back to the interactive form — it hangs an autonomous loop.
-  if php artisan boost:install --no-interaction >/dev/null 2>&1; then
+  if php artisan boost:install --no-interaction </dev/null >/dev/null 2>&1; then
     ok "laravel-boost installed"
   else
     warn "boost:install needs interactive input — run 'php artisan boost:install' yourself"
