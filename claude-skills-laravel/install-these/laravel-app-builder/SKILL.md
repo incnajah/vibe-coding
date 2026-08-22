@@ -118,7 +118,7 @@ Per slice:
 3. Pest tests against the Actions — **write these before the UI**
 4. Filament resource — **full CRUD, not just a list**: list, create, edit, delete, plus any state transition as its own action. Lay the form out in sections (content 2/3, meta 1/3), never as a flat field list. Cover it with tests that actually drive the panel: `Livewire::test(ListPosts::class)`, `->fillForm()->call('create')`, `->callTableAction('publish', $record)`. A resource that was generated and never opened is not built.
 5. Inertia controller + React page
-6. On the first slice only: **replace Filament's stock dashboard.** `AccountWidget` and `FilamentInfoWidget` — a "Welcome" card and links to Filament's own docs — are deleted, and real stat cards plus a recent-records table take their place. It is the screen the client opens every day; leaving the scaffold there is the most visible way an app looks unfinished.
+6. On the first slice only: **a settings page and a real dashboard.** Settings is a Filament Page (not a Resource) backed by the key-value store — site title, tagline, favicon, contact — wired into the Inertia share and the root Blade view so it actually changes the site. And **replace Filament's stock dashboard.** `AccountWidget` and `FilamentInfoWidget` — a "Welcome" card and links to Filament's own docs — are deleted, and real stat cards plus a recent-records table take their place. It is the screen the client opens every day; leaving the scaffold there is the most visible way an app looks unfinished.
 7. `bash "$SKILL_DIR/scripts/verify.sh"` — from the project root
 8. If verify fails: read the actual error output, fix, re-run. Do not proceed to the next slice with a red build.
 

@@ -136,6 +136,89 @@ $this->actingAs($admin)->get('/admin')
     ->assertDontSee('fi-account-widget');
 ```
 
+## Navigation — icon, group, label, sort. Every time.
+
+`make:filament-resource` sets a `$navigationIcon` for you. `make:filament-page` does **not**, and a sidebar where one item has no icon is the item that looks broken. It is invisible until someone opens the panel, which is exactly the kind of thing that ships.
+
+```php
+use BackedEnum;
+use Filament\Support\Icons\Heroicon;
+use UnitEnum;
+
+protected static string | BackedEnum | null $navigationIcon = Heroicon::OutlinedCog6Tooth;
+protected static string | UnitEnum | null $navigationGroup = 'Sistem';
+protected static ?string $navigationLabel = 'Pengaturan';
+protected static ?int $navigationSort = 90;
+```
+
+Four properties on every Resource and every Page:
+
+- **Icon.** v5 takes the `Heroicon` enum, not a string. Outlined for navigation.
+- **Group** once there are more than about five items — content, transactions, system. Ungrouped sidebars stop being scannable fast.
+- **Label** in the app's own language, plural, and `$modelLabel` / `$pluralModelLabel` too, or Filament will say "Posts" in an otherwise Indonesian panel.
+- **Sort**, or the order shifts between environments and settings ends up above content.
+
+Guard it with a test rather than an eyeball:
+
+```php
+foreach (Filament::getPanel('admin')->getPages() as $page) {
+    if ($page::getNavigationIcon() === null && $page::shouldRegisterNavigation()) {
+        $missing[] = $page;
+    }
+}
+expect($missing)->toBe([]);
+```
+
+## Settings — a Page, not a Resource
+
+There is no list of settings to browse and nothing to create or delete, so a Resource is the wrong shape. One Page, one form, one save.
+
+Back it with the key-value store from `architecture.md` — that part is non-negotiable, and adding a setting must never require a migration.
+
+v5 composes a page body from a schema, not from a custom Blade view. This is the whole page:
+
+```php
+class ManageSettings extends Page
+{
+    public ?array $data = [];
+
+    public function mount(Settings $settings): void
+    {
+        $this->form->fill([...]);           // defaults come from the store
+    }
+
+    public function form(Schema $schema): Schema
+    {
+        return $schema->components([ /* Sections, as in any other form */ ])
+            ->statePath('data');
+    }
+
+    public function content(Schema $schema): Schema
+    {
+        return $schema->components([
+            Form::make([EmbeddedSchema::make('form')])
+                ->id('form')
+                ->livewireSubmitHandler('save')
+                ->footer([Actions::make($this->getFormActions())->key('form-actions')]),
+        ]);
+    }
+
+    public function save(SaveSettings $save): void
+    {
+        $save->handle($this->form->getState());   // the Action owns the write
+        Notification::make()->title('Pengaturan disimpan')->success()->send();
+    }
+}
+```
+
+Do **not** hand-write a Blade view with `<x-filament-panels::form.actions>` — that component does not exist in v5, and the failure only appears when the page is rendered.
+
+What belongs on it, at minimum, for any site with a public face: site title, tagline, favicon, contact address. Then:
+
+- **Validate at the field.** `maxLength(60)` on the title and `maxLength(160)` on the tagline are not arbitrary — they are where Google truncates. Say so in `helperText()`.
+- **A file upload is a path in the store, not a blob.** `FileUpload::make('favicon_path')->disk('public')->directory('branding')`, and `php artisan storage:link` has to run on deploy or the file 404s.
+- **Wire it into the app, or it is a form that does nothing.** Share identity through the Inertia middleware so every page has it, and read it in the root Blade view for `<title>` and the favicon link. A settings page that saves values nothing reads is the most common way this feature is faked.
+
 ## Table performance
 
 Filament tables render every visible row server-side. On any table expected to grow:
@@ -202,6 +285,8 @@ it('publishes a package', function () {
 | `/admin/login` returns 404 | v5 does not call `->login()` in the generated panel provider — add it, or nobody can sign in |
 | Every generated admin link 404s | The model overrides `getRouteKeyName()` (e.g. to `slug`) for public URLs. Filament derives its record routes from the same key, so `/admin/posts/{id}/edit` stops resolving. Leave the route key alone and bind the slug explicitly in the public route instead |
 | `assertCanSeeTableRecords` finds nothing | The table uses `deferLoading()`, so rows are not fetched until the table loads. Call `->loadTable()` first in the test |
+| A sidebar item has no icon | `make:filament-page` does not set `$navigationIcon`; only Resources get one automatically |
+| `Unable to locate a class or view for component [filament-panels::form.actions]` | That component does not exist in v5. Compose the page body with a `content()` schema instead of a hand-written Blade view |
 | 403 on `/admin` in production | `canAccessPanel()` not implemented |
 | Styles broken after deploy | `php artisan filament:assets` not run; or app CSS merged into the panel |
 | Upload works locally, 404 in production | `php artisan storage:link` missing, or wrong `default_filesystem_disk` |
