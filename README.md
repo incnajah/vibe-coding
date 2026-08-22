@@ -267,6 +267,9 @@ Ini mengecek hal-hal yang bikin aplikasi celaka setelah online — misalnya mode
 
 ## 6. Contoh nyata dari nol sampai jadi
 
+> 💡 **Ada aplikasi jadi yang bisa kamu jalankan sekarang.** Blog di [`examples/blog-demo/`](examples/blog-demo/) dibangun benar-benar dengan skill ini, bukan ditulis tangan untuk dokumentasi. Hasil verifikasinya apa adanya di [`examples/blog-demo/docs/test-report.md`](examples/blog-demo/docs/test-report.md): 27 tes lulus, `verify.sh --full` hijau, audit tampilan bersih.
+
+
 Semua yang kamu ketik, berurutan:
 
 ```bash

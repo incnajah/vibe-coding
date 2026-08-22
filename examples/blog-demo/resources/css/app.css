@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+@source "../views/**/*.blade.php";
+@source "../js/**/*.{ts,tsx}";
+
+/* Semantic roles, not literal colour names — a rebrand edits this block and
+   nothing else. Values are oklch so lightness is perceptually uniform: two
+   colours with the same L genuinely look equally light. */
+@theme {
+  --color-surface:        oklch(0.995 0.003 90);
+  --color-surface-raised: oklch(1 0 0);
+  --color-surface-muted:  oklch(0.968 0.005 90);
+  --color-border:         oklch(0.906 0.006 90);
+  --color-border-strong:  oklch(0.82 0.008 90);
+  --color-content:        oklch(0.23 0.012 75);
+  --color-content-muted:  oklch(0.52 0.014 75);
+  --color-primary:        oklch(0.52 0.16 264);
+  --color-primary-hover:  oklch(0.45 0.16 264);
+  --color-primary-fg:     oklch(0.99 0 0);
+  --color-accent-bg:      oklch(0.955 0.025 264);
+  --color-danger:         oklch(0.56 0.19 25);
+
+  /* Seven steps. A scale wide enough to express anything expresses nothing. */
+  --spacing-1: 0.25rem;
+  --spacing-2: 0.5rem;
+  --spacing-3: 0.75rem;
+  --spacing-4: 1rem;
+  --spacing-6: 1.5rem;
+  --spacing-8: 2rem;
+  --spacing-12: 3rem;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 1rem;
+
+  /* Every size ships with its line height. A font size without one is half a
+     decision, and the missing half is where vertical rhythm falls apart. */
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.5;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.55;
+  --text-base: 1.0625rem;
+  --text-base--line-height: 1.7;
+  --text-lg: 1.25rem;
+  --text-lg--line-height: 1.5;
+  --text-xl: 1.75rem;
+  --text-xl--line-height: 1.25;
+  --text-2xl: 2.5rem;
+  --text-2xl--line-height: 1.1;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-serif: ui-serif, Georgia, "Times New Roman", serif;
+}
+
+/* Dark mode is a token override, never a dark: class on every component.
+   Components stay written as bg-surface text-content and simply work. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-surface:        oklch(0.17 0.008 265);
+    --color-surface-raised: oklch(0.215 0.01 265);
+    --color-surface-muted:  oklch(0.245 0.012 265);
+    --color-border:         oklch(0.31 0.012 265);
+    --color-border-strong:  oklch(0.42 0.014 265);
+    --color-content:        oklch(0.95 0.005 265);
+    --color-content-muted:  oklch(0.68 0.012 265);
+    --color-primary:        oklch(0.72 0.14 264);
+    --color-primary-hover:  oklch(0.79 0.13 264);
+    --color-primary-fg:     oklch(0.17 0.01 265);
+    --color-accent-bg:      oklch(0.26 0.035 264);
+  }
+}
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body { background: var(--color-surface); color: var(--color-content); }
+  ::selection { background: var(--color-accent-bg); }
+}
+
+/* Motion communicates or it is noise. Respect the user who asked for less. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
