@@ -68,6 +68,74 @@ class User extends Authenticatable implements FilamentUser
 
 **Media through a library.** `SpatieMediaLibraryFileUpload` so admin and frontend read images through one abstraction, with conversions defined once on the model.
 
+## The dashboard — always replace the stock one
+
+Filament scaffolds `/admin` with two widgets, and **both must go, every time**:
+
+- `AccountWidget` — a "Welcome, Admin" card with a sign-out button that already exists in the user menu
+- `FilamentInfoWidget` — Filament's own logo, version number, and links to its documentation
+
+Neither says one word about the client's data. A panel that opens on them is the clearest possible signal that nobody finished the job — and it is the first screen the client sees, every single day.
+
+Remove them from the panel provider:
+
+```php
+->widgets([])   // AccountWidget and FilamentInfoWidget deleted, imports too
+->discoverWidgets(in: app_path('Filament/Admin/Widgets'), for: 'App\Filament\Admin\Widgets')
+```
+
+Then build a dashboard that answers *"what should I look at today?"*
+
+**Row one — stat cards.** Three to five, no more. Each is a number the owner would actually check, with a one-line description and a colour that means something.
+
+```php
+class PostStats extends StatsOverviewWidget
+{
+    protected static ?int $sort = 1;
+
+    protected function getStats(): array
+    {
+        // One grouped query, not one per tile. A dashboard that fires a query
+        // per card is the first thing to get slow as the data grows.
+        $c = Post::query()
+            ->selectRaw('count(*) as total')
+            ->selectRaw('sum(case when published_at is not null then 1 else 0 end) as published')
+            ->first();
+
+        return [
+            Stat::make('Total artikel', (int) $c->total)
+                ->description('Semua status')
+                ->descriptionIcon('heroicon-m-document-text')
+                ->chart($this->weeklyTrend())      // sparkline: trend beats a number
+                ->color('gray'),
+            Stat::make('Terbit', (int) $c->published)
+                ->description('Terlihat pembaca')
+                ->color('success'),
+        ];
+    }
+}
+```
+
+**Row two — a table widget** of the five most recently touched records, `->paginated(false)`, `columnSpan('full')`. It answers "what changed?" without a click.
+
+**Optionally a chart** — but only where a trend actually informs a decision. A chart of four data points is decoration.
+
+Rules that keep dashboards useful rather than decorative:
+
+- **Every tile is a number someone acts on.** "Total users" on a site with one user is noise. If nobody would change behaviour based on it, cut it.
+- **Colour carries meaning.** `success` for healthy, `warning` for something needing attention, `gray` for neutral. A dashboard where everything is green teaches people to ignore green.
+- **One query per widget, not per tile.** Aggregate with conditional sums.
+- **Set `protected static ?int $sort`** on each widget or the order changes between environments.
+- **Test the widgets, not just the page.** They render lazily, so `$this->get('/admin')->assertSee('Total artikel')` fails on a perfectly working dashboard. Use `Livewire::test(PostStats::class)->assertSee(...)`.
+
+Assert the boilerplate is actually gone, or it quietly comes back on the next scaffold:
+
+```php
+$this->actingAs($admin)->get('/admin')
+    ->assertDontSee('filamentphp.com/docs')
+    ->assertDontSee('fi-account-widget');
+```
+
 ## Table performance
 
 Filament tables render every visible row server-side. On any table expected to grow:

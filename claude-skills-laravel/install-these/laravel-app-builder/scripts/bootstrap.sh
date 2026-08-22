@@ -99,6 +99,34 @@ case "$(php "$PANELPATCH" >/dev/null 2>&1; echo $?)" in
 esac
 rm -f "$PANELPATCH"
 
+# Filament scaffolds the dashboard with AccountWidget ("Welcome, Admin" + a sign
+# out button that already exists in the menu) and FilamentInfoWidget (Filament's
+# logo, version, and links to its own docs). Neither says anything about the
+# client's data, and a panel opening on them reads as unfinished work.
+WIDGETPATCH="$(mktemp)"
+cat > "$WIDGETPATCH" <<'PHP'
+<?php
+$f = 'app/Providers/Filament/AdminPanelProvider.php';
+if (!is_file($f)) { exit(4); }
+$s = $orig = file_get_contents($f);
+foreach (['AccountWidget', 'FilamentInfoWidget'] as $w) {
+    $s = str_replace("use Filament\\Widgets\\{$w};\n", '', $s);
+    $s = preg_replace('/^\s*'.$w.'::class,\s*\n/m', '', $s);
+}
+if ($s === $orig) { exit(0); }
+if (!is_string($s)) { exit(3); }          // preg_replace returns null on failure
+if (trim($s) === '') { exit(3); }         // never write an empty provider
+file_put_contents($f, $s);
+exit(5);
+PHP
+case "$(php "$WIDGETPATCH" >/dev/null 2>&1; echo $?)" in
+  0) ok "no stock Filament widgets to remove" ;;
+  5) ok "removed Filament's stock dashboard widgets — build real ones" ;;
+  4) : ;;
+  *) warn "could not remove the stock widgets; delete AccountWidget and FilamentInfoWidget from AdminPanelProvider yourself" ;;
+esac
+rm -f "$WIDGETPATCH"
+
 log "Publishing media library migrations"
 php artisan vendor:publish --tag=medialibrary-migrations --no-interaction >/dev/null 2>&1 \
   || warn "medialibrary migrations not published — the media table will be missing"
