@@ -375,6 +375,9 @@ Cari gejalanya di kolom kiri.
 | Tampilan admin berantakan setelah upload ke server | Aset belum dibangun ulang | Jalankan `php artisan filament:assets` di server |
 | `Port 8899 already in use` | Port sedang dipakai program lain | `VERIFY_PORT=9000 bash "$SKILL_DIR/scripts/verify.sh" --full` |
 | `npm error ERESOLVE` | Versi paket bentrok | `bootstrap.sh` versi terbaru sudah menanganinya — pastikan kamu pakai yang terbaru |
+| `composer run dev` langsung mati, ada `[pcntl] extension is required` | `php artisan pail` butuh pcntl yang tidak ada di Windows, dan `--kill-others` ikut mematikan server & Vite | `bootstrap.sh` sudah membuang pail dari script `dev`. Untuk project lama: hapus `"php artisan pail --timeout=0"` dari `scripts.dev` di `composer.json` |
+| Tes bawaan `ExampleTest` gagal `no such table` | Tes bawaan Laravel berbentuk class PHPUnit, jadi tidak kena `RefreshDatabase` dari Pest | Ubah jadi gaya Pest (`it('...', function () {...})`). `bootstrap.sh` sudah melakukannya |
+| Judul tab masih "Laravel" padahal sudah pakai `<Head>` | `<Head>` bekerja di browser; HTML dari server masih pakai judul bawaan | Normal tanpa SSR. Kalau butuh SEO, lihat `references/inertia-react.md` — Blade atau Inertia SSR |
 
 **Aturan umum kalau bingung:** copy seluruh pesan error, tempel ke Claude, dan bilang *"ini errornya, tolong perbaiki"*. Dia memang dirancang untuk membaca error sungguhan, bukan menebak.
 

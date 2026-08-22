@@ -87,7 +87,7 @@ Tests confirm the server. They say nothing about whether the page renders. With 
 3. Exercise the main interaction (submit the form, apply the filter)
 4. Check the 375px viewport
 
-Without Playwright, `curl` the route and confirm the response contains the expected `data-page` payload. Weaker, but better than assuming.
+Without Playwright, `curl` the route and confirm the JSON in its `data-page="app"` script tag carries the props the page needs. Weaker than a browser — it proves the server answered, not that React rendered — so say which one you actually did.
 
 ## Context management on long builds
 

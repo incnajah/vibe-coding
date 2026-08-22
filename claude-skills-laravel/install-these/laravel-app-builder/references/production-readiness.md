@@ -81,7 +81,7 @@ Also expose a health check. Laravel 11+ ships `/up`; point the platform's health
 "Laravel is slow" is almost never PHP. Work through these before touching a runtime:
 
 1. **N+1 queries.** Debugbar or Pulse; read the query count on every page. This is the cause the overwhelming majority of the time.
-2. **Oversized Inertia props** — check the `data-page` payload in page source. Trim, defer, paginate.
+2. **Oversized Inertia props** — check the JSON in the `data-page="app"` script tag in page source. Trim, defer, paginate.
 3. **Missing indexes** on foreign keys and sorted columns.
 4. **Uncached repeated work.**
 5. **Frontend bundle size** — code splitting.

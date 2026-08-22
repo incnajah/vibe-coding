@@ -377,6 +377,21 @@ PEST
   ok "tests/Pest.php created"
 fi
 
+# The skeleton's Feature/ExampleTest is a PHPUnit class, so Pest's
+# uses(...)->in('Feature') binding does not reach it and it never gets
+# RefreshDatabase. It passes on an empty app and fails the moment the homepage
+# touches the database — a red suite caused by scaffolding, not by your code.
+if [ -f tests/Feature/ExampleTest.php ] && grep -q 'class ExampleTest' tests/Feature/ExampleTest.php; then
+  cat > tests/Feature/ExampleTest.php <<'PEST'
+<?php
+
+it('serves the homepage', function () {
+    $this->get('/')->assertOk();
+});
+PEST
+  ok "stock Feature/ExampleTest converted to Pest so it picks up RefreshDatabase"
+fi
+
 if [ ! -f phpstan.neon ] && [ ! -f phpstan.neon.dist ]; then
   cat > phpstan.neon <<'NEON'
 includes:
@@ -389,6 +404,40 @@ parameters:
 NEON
   ok "phpstan.neon created (level 5)"
 fi
+
+# ------------------------------------------------------------- composer dev
+# `composer run dev` runs concurrently with --kill-others, and one of its four
+# processes is `php artisan pail`, which requires the pcntl extension. pcntl does
+# not exist on Windows, so pail dies on startup and takes the server and Vite
+# down with it — the whole dev loop is unusable, and the error is buried under a
+# stack trace from a log viewer nobody asked for.
+log "Checking the dev script"
+DEVPATCH="$(mktemp)"
+cat > "$DEVPATCH" <<'PHP'
+<?php
+if (extension_loaded('pcntl')) { exit(0); }
+$f = 'composer.json';
+if (!is_file($f)) { exit(4); }
+$j = json_decode(file_get_contents($f), true);
+if (!isset($j['scripts']['dev']) || !is_array($j['scripts']['dev'])) { exit(4); }
+$changed = false;
+foreach ($j['scripts']['dev'] as $i => $line) {
+    if (!is_string($line) || !str_contains($line, 'pail')) { continue; }
+    $line = preg_replace('/\s*"php artisan pail[^"]*"/', '', $line);
+    $line = preg_replace('/--names=[^\s]*/', '', $line);
+    $j['scripts']['dev'][$i] = trim(preg_replace('/\s+/', ' ', $line)).' --names=server,queue,vite';
+    $changed = true;
+}
+if (!$changed) { exit(0); }
+file_put_contents($f, json_encode($j, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)."\n");
+exit(5);
+PHP
+case "$(php "$DEVPATCH" >/dev/null 2>&1; echo $?)" in
+  0) ok "composer run dev is usable as-is" ;;
+  5) ok "removed 'artisan pail' from composer run dev (no pcntl on this platform)" ;;
+  *) warn "could not inspect composer.json's dev script" ;;
+esac
+rm -f "$DEVPATCH"
 
 # ---------------------------------------------------------------------- MCP
 log "Registering MCP servers"

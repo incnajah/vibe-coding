@@ -96,9 +96,7 @@ Persistent layout so navigation does not remount the shell:
 Index.layout = (page: React.ReactNode) => <PublicLayout>{page}</PublicLayout>
 ```
 
-## SEO
-
-Inertia renders client-side, so pages need explicit head management or they ship empty metadata:
+## SEO — `<Head>` is not enough, and this is measurable
 
 ```tsx
 import { Head } from '@inertiajs/react'
@@ -108,7 +106,27 @@ import { Head } from '@inertiajs/react'
 </Head>
 ```
 
-If SEO is a stated requirement and the content is mostly static, flag it at the ERD gate: Blade would serve that content better than a client-rendered SPA, and SSR is real added complexity. This is worth one sentence to the user, not a silent decision either way.
+That sets the title **in the browser, after hydration.** The HTML the server sends still carries whatever `app.blade.php` hardcoded. Verified on a real page: `<Head><title>{post.title}</title></Head>` renders correctly for a human, while `curl` of the same URL returns `<title>Laravel</title>` and no description tag at all.
+
+So: fine for users, useless for any crawler that does not execute JavaScript.
+
+Three honest options, in increasing cost:
+
+1. **Serve that content from Blade instead.** A catalogue or article page is mostly static; Blade renders real metadata with no extra moving parts. This is usually the right answer.
+2. **Turn on Inertia SSR** — `php artisan inertia:start-ssr`, plus a Node process to keep alive in production. Real added operational cost.
+3. **Inject the title server-side** into the Blade view for the routes that matter, and accept `<Head>` for the rest.
+
+If SEO is a stated requirement, raise this at the ERD gate in one sentence rather than deciding silently. Shipping a client-rendered SPA to a client who expects Google traffic is the kind of gap that surfaces months later.
+
+## Reading the payload
+
+The props Inertia sends are in a JSON script tag, not an HTML attribute — the older `data-page="..."` attribute form is gone:
+
+```bash
+curl -s http://127.0.0.1:8000/ | grep -o 'data-page="app"[^>]*>{.*}</script>'
+```
+
+Check its size on any page that feels slow. Props the page never reads are pure weight on every visit.
 
 ## WhatsApp integration
 
@@ -122,7 +140,7 @@ It is a link, not an API. Build the URL server-side so the message template live
 ## Verification checklist per page
 
 - Query count in Debugbar is in single digits
-- `data-page` payload is not carrying unused props
+- the JSON payload in the `data-page="app"` script tag is not carrying unused props
 - Browser console has zero errors
 - Form validation errors render from the server
 - Page works on a 375px viewport

@@ -128,7 +128,7 @@ The most common configuration failure here is trying to make Filament and the ap
 "Laravel is slow" is almost never PHP's fault. Diagnose in this order before touching Octane or FrankenPHP:
 
 1. **N+1 queries** — Debugbar or Telescope, read the query count on every page. This is the cause the overwhelming majority of the time.
-2. **Oversized Inertia props** — check the `data-page` payload size in page source. Trim, defer, paginate.
+2. **Oversized Inertia props** — check the size of the JSON in the `data-page="app"` script tag in page source. Trim, defer, paginate.
 3. **Missing indexes** on foreign keys and `where`/`orderBy` columns
 4. **Uncached repeated work**; `php artisan optimize` in production
 5. **Frontend bundle size** — code splitting
