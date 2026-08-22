@@ -63,7 +63,9 @@ If a registration command fails (no `claude` CLI, sandboxed environment, Windows
 
 Read `references/requirements-to-erd.md` before this phase.
 
-**First decide the shape of the app**, because it changes what you produce:
+**First, check the stack is right at all.** `references/architecture.md` opens with the four cases: an internal tool wants Filament alone, a content site wants Filament plus Blade, and only genuinely app-like public interactivity earns Inertia + React. Adding React to a brochure site doubles the frontend surface for nothing. Say so in one sentence at the gate if it applies — it is advice, not a veto.
+
+**Then decide the shape of the app**, because it changes what you produce:
 
 - **Catalogue-shaped** — records are created, edited, displayed; nothing moves between people. A travel site, a company profile, a product catalogue.
 - **Process-shaped** — one record moves through several roles in sequence and the allowed actions depend on where it is. A restaurant order (diner scans QR → kitchen → cashier → diner watches status), a delivery, an approval flow, a booking with payment.

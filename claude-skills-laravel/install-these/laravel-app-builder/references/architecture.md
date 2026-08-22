@@ -1,5 +1,22 @@
 # Architecture Contract
 
+## Step 0 — Is this stack even the right one?
+
+Do not skip this. Adding Inertia + React on top of Filament costs a second build pipeline, a second design system, a second auth mental model, and roughly double the frontend surface to maintain. That cost is worth paying only sometimes.
+
+| Situation | Recommendation |
+|---|---|
+| Admin panel only — internal tool, dashboard, CRUD | Filament alone. No Inertia. |
+| Public side is mostly static content or a catalogue, SEO matters, low interactivity | Filament admin + **Blade** frontend. Ships in a fraction of the time. |
+| Public side has real app-like interactivity: multi-step flows, live filtering, a cart, end-user dashboards | Filament admin + Inertia/React. This is the case the stack is for. |
+| A separate mobile or JS client is also needed | Filament admin + API (Sanctum) + a standalone React SPA. Inertia is the wrong fit. |
+
+State the recommendation plainly, **including when it means talking the user out of React.** If they still want it for learning, that is a legitimate reason — acknowledge it and move on. What is not legitimate is an unexamined default driving the architecture.
+
+Say this once, at the ERD gate, in one or two sentences. It is advice, not a veto.
+
+## The two-paradigm problem
+
 This stack puts two frontend paradigms in one codebase: Filament (Livewire + Alpine + Blade, server-driven) for admin, and Inertia + React for the public side. Nearly every failure in it traces back to business logic leaking into one of the two UI layers, so behaviour silently diverges between admin and frontend.
 
 One rule settles most design questions:

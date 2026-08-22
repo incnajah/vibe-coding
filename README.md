@@ -31,15 +31,14 @@ Bayangkan kamu punya pegawai programmer. Kalau kamu bilang *"bikinin website tra
 
 **Skill = buku petunjuk itu.** Kamu kasih ke Claude sekali, lalu setiap kali kamu minta bikin aplikasi, dia sudah tahu caranya.
 
-### Ada tiga skill di sini. Pasang dua saja.
+### Dua skill
 
-| Skill | Gunanya | Pasang? |
-|---|---|---|
-| `laravel-app-builder` | Bikin aplikasi dari cerita fiturmu | ✅ Ya |
-| `ui-design-system` | Bikin tampilan rapi dan seragam | ✅ Ya |
-| `laravel-filament-inertia` | Versi lama dari yang pertama | ❌ Jangan |
+| Skill | Gunanya |
+|---|---|
+| `laravel-app-builder` | Bikin aplikasi dari cerita fiturmu: PRD, ERD, alur kerja, database, admin, halaman publik, tes |
+| `ui-design-system` | Menjaga tampilan rapi dan seragam sampai file ke-dua ratus |
 
-Kenapa yang ketiga jangan? Karena isinya sudah dilebur ke yang pertama. Kalau dua-duanya dipasang, Claude bingung mau pakai yang mana, dan hasilnya jadi tidak menentu. Penjelasan lengkap ada di [bagian 8](#kenapa-skill-ketiga-jangan-dipasang).
+Boleh pasang salah satu saja. Tapi kalau kamu membangun aplikasi baru, pasang dua-duanya: yang pertama membangun, yang kedua menjaga hasilnya tidak berantakan seiring aplikasi membesar.
 
 ### Istilah yang akan sering muncul
 
@@ -82,6 +81,15 @@ Kalau salah satu bilang `command not found`, berarti belum terpasang:
 | Git | [git-scm.com](https://git-scm.com) |
 
 > **Pengguna Windows:** semua perintah di dokumen ini dijalankan di **Git Bash**, bukan Command Prompt dan bukan PowerShell. Git Bash otomatis ikut terpasang bersama Git. Cari "Git Bash" di menu Start.
+
+**Versi PHP menentukan versi Laravel yang kamu dapat.** Ini sering bikin bingung: kamu bikin project baru tapi dapat Laravel "lama".
+
+| PHP kamu | Laravel yang terpasang |
+|---|---|
+| 8.2 | **Laravel 12** — Composer menolak 13 karena syaratnya PHP ^8.3 |
+| 8.3 atau lebih baru | **Laravel 13** |
+
+Keduanya sah dan didukung skill ini. Tapi kalau kamu memang mau Laravel 13, naikkan PHP-nya dulu — bukan skill-nya yang salah pilih. Cek dengan `php -v`.
 
 Satu lagi yang **sangat disarankan** tapi tidak wajib: **Claude Code CLI**. Ini yang membuat Claude bisa melihat isi database dan membuka browser sungguhan untuk mengecek hasil kerjanya. Cek dengan `claude --version`.
 
@@ -412,14 +420,6 @@ bash "$SKILL_DIR/scripts/learn.sh" --apply  # baru simpan
 Kenapa dua langkah? Karena menulis ke skill mengubah perilaku Claude di **semua** project berikutnya, selamanya. Itu bukan hal yang boleh terjadi diam-diam. Kamu harus lihat dulu apa yang mau ditambahkan.
 
 Batasnya 40 catatan. Lewat dari itu, menambah berarti membuang yang lama — bukan menumpuk. Catatan yang terlalu banyak justru menenggelamkan panduan yang sudah bagus.
-
-### Kenapa skill ketiga jangan dipasang
-
-`laravel-filament-inertia` adalah versi pertama. Isinya sudah dipindah ke dalam `laravel-app-builder`.
-
-Masalahnya: keduanya sama-sama mengaku ahli "Laravel + Filament + Inertia". Kalau dua-duanya aktif, Claude kadang pakai yang satu, kadang yang lain, kadang dua-duanya sekaligus lalu mengulang-ulang hal yang sama.
-
-Pasang dia **hanya kalau** kamu cuma mau nasihat arsitektur, tanpa mesin pembangun otomatis. Pilih salah satu.
 
 ---
 
