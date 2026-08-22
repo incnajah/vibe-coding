@@ -1,0 +1,8 @@
+* text=auto eol=lf
+
+# Shell scripts must stay LF even on Windows checkouts — a CRLF shebang makes
+# bash report "bad interpreter: no such file or directory".
+*.sh text eol=lf
+
+# .skill packages are zip archives.
+*.skill binary
