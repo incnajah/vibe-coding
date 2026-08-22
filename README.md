@@ -23,11 +23,11 @@ File `.skill` adalah paket siap pasang. Folder di dalam `install-these/` adalah 
 
 **Claude.ai / aplikasi Claude** — buka file `.skill`, klik **Save skill**.
 
-**Claude Code** — salin foldernya:
+**Claude Code** — salin foldernya, dari root repo ini:
 
 ```bash
-cp -r install-these/laravel-app-builder ~/.claude/skills/
-cp -r install-these/ui-design-system ~/.claude/skills/
+cp -r claude-skills-laravel/install-these/laravel-app-builder ~/.claude/skills/
+cp -r claude-skills-laravel/install-these/ui-design-system ~/.claude/skills/
 ```
 
 Untuk satu project saja, pakai `.claude/skills/` di dalam project.
