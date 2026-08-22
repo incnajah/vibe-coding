@@ -116,7 +116,7 @@ Per slice:
 1. Migration + model + factory + seeder
 2. Action classes with business logic
 3. Pest tests against the Actions — **write these before the UI**
-4. Filament resource
+4. Filament resource — **full CRUD, not just a list**: list, create, edit, delete, plus any state transition as its own action. Lay the form out in sections (content 2/3, meta 1/3), never as a flat field list. Cover it with tests that actually drive the panel: `Livewire::test(ListPosts::class)`, `->fillForm()->call('create')`, `->callTableAction('publish', $record)`. A resource that was generated and never opened is not built.
 5. Inertia controller + React page
 6. `bash "$SKILL_DIR/scripts/verify.sh"` — from the project root
 7. If verify fails: read the actual error output, fix, re-run. Do not proceed to the next slice with a red build.

@@ -123,6 +123,47 @@ The most common configuration failure here is trying to make Filament and the ap
 - Customizing Filament's look means a custom theme (`php artisan make:filament-theme`) with its own CSS file registered on the panel — never merged into `app.css`
 - Never import app styles into a Filament view or Filament's theme into React. The two Tailwind builds have different presets and will fight
 
+## Settings are key-value. Always.
+
+**Non-negotiable: application settings live in a key-value store, never as columns on a one-row `settings` table.**
+
+The wide-table version looks tidy for about a week. Then every new setting — a WhatsApp number, a footer line, a toggle for a feature that shipped yesterday — is a migration, a deploy, a model change, and a form change. Settings are exactly the data that changes most often and matters least architecturally; putting them in the schema inverts that.
+
+```php
+Schema::create('settings', function (Blueprint $table) {
+    $table->id();
+    $table->string('group')->default('general')->index();
+    $table->string('key')->unique();
+    $table->json('value')->nullable();   // json so a bool stays a bool
+    $table->timestamps();
+});
+```
+
+The rules:
+
+- **Adding a setting must never require a migration.** That is the whole test. If it does, the design is wrong.
+- **`value` is JSON, not `string`.** Otherwise every read needs a cast the caller has to remember, and `"false"` eventually gets treated as true by someone.
+- **Reads go through one class**, never `Setting::where('key', ...)` scattered around:
+
+```php
+final class Settings
+{
+    public function get(string $key, mixed $default = null): mixed
+    {
+        return Cache::rememberForever('settings', fn () => Setting::pluck('value', 'key'))
+            ->get($key, $default);
+    }
+}
+```
+
+- **Cache the whole set, invalidate on write.** A settings row read on every request, uncached, is a query on every page for data that changes monthly.
+- **Typed accessors at the edges.** `$settings->whatsappNumber()` beats `$settings->get('whatsapp_number')` sprinkled through views — one place to change the key, one place to validate the shape.
+- **Seed defaults.** A missing key must not be a 500. Every setting has a default in code, and the store only overrides it.
+
+For a project that wants this ready-made, `spatie/laravel-settings` gives typed settings classes backed by exactly this table. Either approach is fine; a column per setting is not.
+
+**In Filament**, settings get a dedicated Page, not a Resource — there is no list of settings to browse. Group them into sections the same way as any other form. Filament's `KeyValue` field is for genuinely open-ended maps the admin invents (custom meta tags, redirects); known settings get real typed fields with validation, because a text box that accepts anything will eventually receive anything.
+
 ## Performance defaults
 
 "Laravel is slow" is almost never PHP's fault. Diagnose in this order before touching Octane or FrankenPHP:

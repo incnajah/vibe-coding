@@ -10,6 +10,44 @@ php artisan make:filament-user
 
 `--generate` reads the migration and produces form and table schemas matching the installed Filament version. Hand-written Resources drift from the actual API, which is exactly the failure this skill is trying to avoid.
 
+## Form layout — sections, never a flat list
+
+`--generate` emits every column as a flat list of fields. That is a starting point, not a form. Eight stacked inputs means the writer scrolls past publishing controls to reach the body, every time they edit.
+
+Group into **sections**, and split the work from the decisions about the work:
+
+```php
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+
+return $schema->components([
+    Grid::make(3)->schema([
+        Section::make('Konten')
+            ->description('Judul, ringkasan, dan isi.')
+            ->icon('heroicon-o-document-text')
+            ->schema([ /* the thing being made */ ])
+            ->columnSpan(2),
+
+        Section::make('Publikasi')
+            ->description('Siapa menulis, dan kapan tampil.')
+            ->icon('heroicon-o-paper-airplane')
+            ->schema([ /* status, author, dates, visibility */ ])
+            ->columnSpan(1),
+    ]),
+])->columns(1);
+```
+
+Rules that make this consistent across every resource in the panel:
+
+- **Two columns: content 2/3, meta 1/3.** The main artifact on the left; author, status, dates, and flags on the right. Same split everywhere, so an admin never hunts for the publish control.
+- **Every section gets a description.** One line saying what belongs in it. It is the cheapest documentation in the app and it sits exactly where the question is asked.
+- **Long text spans the full width** of its section. A `Textarea` in a half-column is unusable.
+- **`->helperText()` on anything with a rule** — a slug that must not change after publishing, a field that is derived when left blank. Say it at the field, not in a wiki.
+- **More than about ten fields → `Tabs`,** not a longer page. Beyond that, scrolling hides state and people miss required fields.
+- **Never `Section::make()` with no title** just to draw a box. A card with no label is decoration.
+
+`Fieldset` groups related fields *inside* a section; `Section` is the card. Do not nest sections in sections — the nesting reads as hierarchy that is not there.
+
 ## Non-negotiables
 
 **Panel access in production.** Implement `FilamentUser` on the User model. Without it, Filament blocks access outside `local` and the user reports "works on my machine, 403 on the server."
@@ -67,6 +105,16 @@ Filament v4+ scopes all panel queries to the current tenant automatically and as
 
 Filament ships testing helpers. Cover the flows that would actually break something — create, edit, custom actions, authorization — not exhaustive coverage of generated CRUD.
 
+Drive the panel, do not just assert the page returns 200. These are the calls that matter:
+
+```php
+Livewire::test(ListPosts::class)->loadTable()->assertCanSeeTableRecords([$a, $b]);
+Livewire::test(CreatePost::class)->fillForm([...])->call('create')->assertHasNoFormErrors();
+Livewire::test(EditPost::class, ['record' => $id])->fillForm([...])->call('save');
+Livewire::test(ListPosts::class)->callTableAction('publish', $post)->assertHasNoTableActionErrors();
+Livewire::test(EditPost::class, ['record' => $id])->callAction('delete');
+```
+
 ```php
 it('publishes a package', function () {
     $package = Package::factory()->unpublished()->create();
@@ -84,6 +132,8 @@ it('publishes a package', function () {
 | Symptom | Usual cause |
 |---|---|
 | `/admin/login` returns 404 | v5 does not call `->login()` in the generated panel provider — add it, or nobody can sign in |
+| Every generated admin link 404s | The model overrides `getRouteKeyName()` (e.g. to `slug`) for public URLs. Filament derives its record routes from the same key, so `/admin/posts/{id}/edit` stops resolving. Leave the route key alone and bind the slug explicitly in the public route instead |
+| `assertCanSeeTableRecords` finds nothing | The table uses `deferLoading()`, so rows are not fetched until the table loads. Call `->loadTable()` first in the test |
 | 403 on `/admin` in production | `canAccessPanel()` not implemented |
 | Styles broken after deploy | `php artisan filament:assets` not run; or app CSS merged into the panel |
 | Upload works locally, 404 in production | `php artisan storage:link` missing, or wrong `default_filesystem_disk` |

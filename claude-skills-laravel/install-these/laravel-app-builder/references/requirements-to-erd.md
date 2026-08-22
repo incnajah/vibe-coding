@@ -118,6 +118,7 @@ Rules that prevent predictable pain:
 - Enums as PHP backed enums cast on the model, not raw strings scattered through the code.
 - Anything user-facing and addressable gets a unique `slug`.
 - Pivot tables carrying data (`nights`, `sort_order`) get their own model.
+- **Settings are one key-value table, never a column per setting.** If the app has a configurable phone number, footer text, or feature toggle, that is a `settings` table with `key` and a JSON `value` — not columns. Adding a setting must never need a migration. See `architecture.md`.
 
 ## Output 3 — docs/workflows.md (process-shaped apps only)
 
