@@ -98,8 +98,9 @@ while IFS= read -r line; do
   for pkg_ver in $spec; do
     pkg="${pkg_ver%%:*}"
     case "$pkg" in */*) ;; *) continue ;; esac
-    installed="$(composer show "$pkg" 2>/dev/null | awk '/^versions/ {print $NF; exit}')"
-    [ -n "$installed" ] || { warn "$pkg not installed — an entry still assumes it"; STALE=$((STALE+1)); }
+    # Presence, not version parsing: `composer show` colourises its output, so
+    # matching on '^versions' silently never fires and every entry reads as stale.
+    composer show "$pkg" >/dev/null 2>&1       || { warn "$pkg not installed — an entry still assumes it"; STALE=$((STALE+1)); }
   done
 done < <(grep -h 'applies:' "$LEARNED" 2>/dev/null || true)
 [ "$STALE" -eq 0 ] && ok "no entry references a package that is missing from this project"

@@ -362,6 +362,8 @@ Cari gejalanya di kolom kiri.
 | `missing required tools: composer` | Ada program yang belum terpasang | Lihat [bagian 2](#2-yang-harus-ada-di-komputermu) |
 | `no usable test runner` | Alat testing belum siap | `vendor/bin/pest --init` |
 | Halaman `/admin` bilang **403** | Akun kamu belum diizinkan masuk panel | Claude harus menambahkan `canAccessPanel()` di model User |
+| `/admin/login` bilang **404** | Filament v5 tidak memasang halaman login secara otomatis | Tambahkan `->login()` di `app/Providers/Filament/AdminPanelProvider.php`. `bootstrap.sh` sudah melakukannya untuk project baru |
+| Halaman depan **error 500**, pesannya `Unable to locate file in Vite manifest` | Halaman Blade menunjuk file JS yang sudah tidak dibangun | Samakan nama file di `@vite([...])` dengan yang ada di `vite.config.js` |
 | Tampilan admin berantakan setelah upload ke server | Aset belum dibangun ulang | Jalankan `php artisan filament:assets` di server |
 | `Port 8899 already in use` | Port sedang dipakai program lain | `VERIFY_PORT=9000 bash "$SKILL_DIR/scripts/verify.sh" --full` |
 | `npm error ERESOLVE` | Versi paket bentrok | `bootstrap.sh` versi terbaru sudah menanganinya — pastikan kamu pakai yang terbaru |
@@ -451,7 +453,7 @@ Harus dijalankan **dari dalam folder project**.
 | Tes lulus | selalu |
 | Tampilan bisa dibangun | selalu |
 | Analisa kode mendalam | `--full` |
-| Halaman `/` dan `/admin/login` benar-benar terbuka | `--full` |
+| Halaman `/` dan `/admin` benar-benar terbuka | `--full` |
 
 Kode keluar: `0` lulus, `1` ada yang gagal, `2` salah cara pakai.
 
@@ -496,9 +498,38 @@ bash "$SKILL_DIR/scripts/learn.sh" --apply  # simpan
 
 Ditulis apa adanya. Lebih baik kamu tahu sekarang daripada kaget nanti.
 
-<!-- STATUS-E2E -->
+### Sudah diuji sungguhan
 
-- **Belum diuji di PowerShell atau Command Prompt.** Semua script ditulis untuk bash. Di Windows pakai **Git Bash** (ikut terpasang bersama Git) atau WSL. Ini bukan rencana untuk diperbaiki — Git Bash sudah ada di setiap komputer yang punya Git.
+Ini bukan klaim, ini hasil yang dijalankan pada 23 Agustus 2026 di Windows + Git Bash, dengan Composer dan npm asli, dari folder kosong:
+
+| Yang diuji | Hasil |
+|---|---|
+| `bootstrap.sh` dari nol | **berhasil** — Laravel 12.67, Filament v5.7.6, Inertia, Tailwind 4.3.3, semua terpasang dan tersambung |
+| Dijalankan ulang di project yang sudah ada | **aman** — melewati yang sudah ada, hanya membuat yang hilang |
+| `verify.sh --full` | **lulus semua** — syntax, migrasi, route, build Vite, 2 tes Pest, panel Filament, `GET / → 200`, `GET /admin → 302` |
+| `preflight-prod.sh` | menemukan 2 masalah yang memang benar ada di project baru |
+| `audit-ui.sh` | bersih setelah perbaikan (lihat di bawah) |
+
+Tes itu menemukan **lima bug nyata** yang tidak akan ketahuan hanya dengan membaca kode:
+
+1. `@vitejs/plugin-react` terbaru butuh Vite versi lebih baru dari yang dipasang Laravel → seluruh pemasangan gagal, TypeScript dan Tailwind ikut tidak terpasang.
+2. `pest --init` bertanya lalu menggantung tanpa batas waktu.
+3. Halaman depan bawaan Laravel menunjuk file lama → error 500 di `/`.
+4. Filament v5 tidak lagi memasang halaman login → `/admin/login` 404, tidak ada yang bisa masuk.
+5. File yang dibuat `bootstrap.sh` sendiri melanggar aturan design system-nya sendiri (warna ditulis manual, tidak ada blok token).
+
+Semuanya sudah diperbaiki dan diuji ulang sampai hijau.
+
+### Yang masih terbuka
+
+
+- **Belum diuji di PowerShell atau Command Prompt.** Semua script ditulis untuk bash, dan sudah terbukti jalan di Git Bash (Windows). Di Windows pakai **Git Bash** (ikut terpasang bersama Git) atau WSL. Ini bukan rencana untuk diperbaiki — Git Bash sudah ada di setiap komputer yang punya Git.
+
+- **Belum diuji di macOS dan Linux.** Script memakai perintah standar yang ada di keduanya, tapi belum pernah benar-benar dijalankan di sana. Kalau kamu yang pertama mencoba, laporkan kalau ada yang aneh.
+
+- **MCP belum diuji ikut terdaftar.** Saat pengujian, Claude Code CLI sengaja disembunyikan supaya setelan MCP di komputer penguji tidak berubah. Jadi bagian pendaftaran `laravel-boost` dan `playwright` belum pernah benar-benar berjalan — script melaporkannya jujur sebagai *degraded* kalau gagal, tapi jalur suksesnya belum terbukti.
+
+- **Loop build belum diuji ujung ke ujung.** Yang sudah terbukti adalah semua alatnya: penyiapan project, gate pemeriksaan, audit tampilan, pemeriksaan produksi. Yang belum diukur adalah Claude membangun aplikasi 6 slice dari nol dalam satu perintah. Angka "6 kali percobaan per slice" adalah batas yang dirancang, bukan hasil pengukuran.
 
 - **Skill tidak memasang MCP diam-diam.** MCP adalah kemampuan tambahan yang membuat Claude bisa melihat isi database dan membuka browser. `bootstrap.sh` menjalankan perintah pemasangannya secara terbuka dan melaporkan mana yang gagal — dia tidak mengubah setelan komputermu tanpa memberitahu.
 

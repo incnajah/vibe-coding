@@ -160,6 +160,18 @@ Do not rewrite everything. It stalls, and the half-migrated state is worse than 
 
 Step 4 is the one that matters. Stopping the bleeding beats cleaning the floor.
 
+## When the same violation keeps coming back
+
+A finding that appears once is a mistake. The same finding across three slices is a **gap in the system**, and fixing the instances again is treating the symptom.
+
+Ask which of these it is:
+
+- **The primitive is missing.** Three features wrote a raw `<button>` because no `Button` variant covered their case. Add the variant; the instances then fix themselves.
+- **The token is missing.** `p-[13px]` keeps appearing because the scale genuinely has no step there. Either extend the scale deliberately and name it, or the design needs to snap to the existing one. Both are decisions; `p-[13px]` is an accident.
+- **The audit cannot see it.** A real drift pattern that `audit-ui.sh` does not detect will keep recurring silently. Add the check to the script — that is the only fix that scales.
+
+If `laravel-app-builder` is also installed, record the lesson through its mechanism: append to `docs/lessons.md` while it is fresh, and promote it at handover with `scripts/learn.sh` once it has recurred. Read that skill's `references/self-improvement.md` for what qualifies. Without it, put the rule where it will be read again — a new check in `audit-ui.sh` beats a note nobody opens.
+
 ## Reference files
 
 | File | Read when |

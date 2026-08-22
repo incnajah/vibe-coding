@@ -71,11 +71,29 @@ php artisan --version
 composer show filament/filament laravel/framework inertiajs/inertia-laravel
 ```
 
-Baseline as of mid-2026: Laravel 13.x, Filament v4 and v5 both maintained, Inertia v2, Tailwind v4, PHP 8.2+.
+These are the versions a clean `bootstrap.sh` run actually resolved on 2026-08-23, not a remembered baseline:
+
+| Package | Resolved |
+|---|---|
+| PHP | 8.2.12 |
+| `laravel/framework` | 12.67.0 |
+| `filament/filament` | v5.7.6 |
+| `livewire/livewire` | v4.4.1 |
+| `inertiajs/inertia-laravel` | v3.3.1 |
+| `tightenco/ziggy` | v2.6.4 |
+| `spatie/laravel-medialibrary` | 11.23.5 |
+| `pestphp/pest` | v3.8.7 |
+| vite | 7.3.6 |
+| tailwindcss | 4.3.3 |
+| `@vitejs/plugin-react` | 5.2.0 |
+
+Treat that table as a snapshot, not a contract — it will drift. The commands above are what tell you the truth on the machine you are on.
 
 - **Filament v3 → v4 is a real break.** Forms and infolists moved to a unified Schema API; actions consolidated into one namespace. v3 snippets do not run on v4/v5, and vice versa.
-- **Filament v5 has no new features over v4** — it exists only for Livewire v4 support. Never present a v5 upgrade as a feature win.
+- **Filament v5 does not enable panel login by default.** A generated `AdminPanelProvider` has no `->login()` call, so `/admin/login` is a 404 and nobody can sign in. `bootstrap.sh` patches this; on a panel you did not scaffold, check for it before concluding auth is broken.
 - **Tailwind v4** is CSS-configured via `@theme`, not `tailwind.config.js`-first.
+- **The Vite entry and the Blade view must agree.** Laravel's `welcome.blade.php` loads `resources/js/app.js`. Switching the Vite input to `app.tsx` without changing the view leaves the homepage throwing "Unable to locate file in Vite manifest" — a 500 on `/` that no unit test catches.
+- **`@vitejs/plugin-react` often requires the next Vite major** after the one the skeleton pins, and npm fails the whole install on that peer conflict rather than choosing an older plugin. Pin the plugin to a version whose peer range accepts the installed Vite.
 
 When unsure whether a method exists in the installed version, check via Boost's docs search tool or the real documentation. Inventing a plausible-looking method call is the single most common way an autonomous build produces code that reads correctly and does not run.
 

@@ -68,6 +68,17 @@ else
   fail "routes"
 fi
 
+# Build before testing. Any request test that renders a Blade or Inertia view
+# needs the Vite manifest, so running tests first reports a missing-asset error
+# as a test failure — pointing at the wrong thing entirely.
+step "Frontend build"
+if [ -f package.json ] && grep -q '"build"' package.json; then
+  npm run build 2>&1 | tail -30
+  [ "${PIPESTATUS[0]}" -eq 0 ] && pass "vite build" || fail "vite build"
+else
+  printf '  – no build script\n'
+fi
+
 step "Tests"
 if [ -f vendor/bin/pest ] && [ -f tests/Pest.php ]; then
   vendor/bin/pest --compact 2>&1 | tail -40
@@ -77,14 +88,6 @@ elif [ -f vendor/bin/phpunit ]; then
   [ "${PIPESTATUS[0]}" -eq 0 ] && pass "phpunit" || fail "phpunit"
 else
   printf '  – no usable test runner (pest needs tests/Pest.php; run: vendor/bin/pest --init)\n'
-fi
-
-step "Frontend build"
-if [ -f package.json ] && grep -q '"build"' package.json; then
-  npm run build 2>&1 | tail -30
-  [ "${PIPESTATUS[0]}" -eq 0 ] && pass "vite build" || fail "vite build"
-else
-  printf '  – no build script\n'
 fi
 
 if [ "$FULL" = true ]; then
@@ -124,7 +127,11 @@ if [ "$FULL" = true ]; then
       tail -20 "$SERVE_LOG"
       fail "dev server did not come up on port ${PORT}"
     else
-      for path in "/" "/admin/login"; do
+      # "/" and the panel root. Not /admin/login — Filament v5 only registers a
+      # login route when the panel calls ->login(), so a hardcoded /admin/login
+      # reports 404 on a perfectly healthy panel. /admin exists in every version
+      # and redirects when unauthenticated, which is a 3xx and still a pass.
+      for path in "/" "/admin"; do
         CODE="$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:${PORT}${path}" || echo 000)"
         case "$CODE" in
           2*|3*) pass "GET ${path} → ${CODE}" ;;

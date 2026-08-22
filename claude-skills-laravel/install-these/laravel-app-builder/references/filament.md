@@ -83,6 +83,7 @@ it('publishes a package', function () {
 
 | Symptom | Usual cause |
 |---|---|
+| `/admin/login` returns 404 | v5 does not call `->login()` in the generated panel provider — add it, or nobody can sign in |
 | 403 on `/admin` in production | `canAccessPanel()` not implemented |
 | Styles broken after deploy | `php artisan filament:assets` not run; or app CSS merged into the panel |
 | Upload works locally, 404 in production | `php artisan storage:link` missing, or wrong `default_filesystem_disk` |

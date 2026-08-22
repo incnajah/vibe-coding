@@ -78,6 +78,27 @@ composer require --dev --no-interaction --with-all-dependencies \
 log "Installing Filament panel"
 php artisan filament:install --panels --no-interaction || warn "filament:install needs manual attention"
 
+# Filament v5's generated panel provider does not call ->login(), so a fresh
+# panel has no login page at all: /admin/login is a 404 and nobody can get in.
+PANELPATCH="$(mktemp)"
+cat > "$PANELPATCH" <<'PHP'
+<?php
+$f = 'app/Providers/Filament/AdminPanelProvider.php';
+if (!is_file($f)) { exit(4); }
+$s = file_get_contents($f);
+if (preg_match('/->login\(/', $s)) { exit(0); }
+$new = preg_replace('/(->path\(\s*[\'"][^\'"]*[\'"]\s*\))/', "$1\n            ->login()", $s, 1, $c);
+if ($c !== 1) { exit(3); }
+file_put_contents($f, $new);
+exit(0);
+PHP
+case "$(php "$PANELPATCH" >/dev/null 2>&1; echo $?)" in
+  0) ok "admin panel login enabled" ;;
+  4) warn "no AdminPanelProvider found — is the Filament panel installed?" ;;
+  *) warn "could not enable ->login() on the admin panel; add it to AdminPanelProvider manually" ;;
+esac
+rm -f "$PANELPATCH"
+
 log "Publishing media library migrations"
 php artisan vendor:publish --tag=medialibrary-migrations --no-interaction >/dev/null 2>&1 \
   || warn "medialibrary migrations not published — the media table will be missing"
@@ -224,7 +245,9 @@ createInertiaApp({
     setup({ el, App, props }) {
         createRoot(el).render(<App {...props} />)
     },
-    progress: { color: '#4B5563' },
+    // A token, not a hex. audit-ui.sh flags raw hex as HIGH, and a bootstrap that
+    // violates the design system it ships is a bad first commit.
+    progress: { color: 'var(--color-primary)' },
 })
 APP
   ok "resources/js/app.tsx created"
@@ -237,11 +260,78 @@ if [ ! -f resources/css/app.css ] || ! grep -q '@import "tailwindcss"' resources
 @source "../views/**/*.blade.php";
 @source "../js/**/*.{ts,tsx}";
 
-/* Design tokens belong here. Define them with the `ui-design-system` skill
-   before building components — semantic roles, not literal color names. */
+/* Starting token set — semantic roles, not literal colour names, so a rebrand
+   touches this block and nothing else. Replace the values once the visual
+   direction is decided; keep the names. Guidance: the `ui-design-system` skill. */
+@theme {
+  --color-surface:        oklch(1 0 0);
+  --color-surface-muted:  oklch(0.97 0.005 260);
+  --color-border:         oklch(0.92 0.006 260);
+  --color-content:        oklch(0.22 0.01 260);
+  --color-content-muted:  oklch(0.55 0.015 260);
+  --color-primary:        oklch(0.55 0.18 255);
+  --color-primary-fg:     oklch(0.99 0 0);
+  --color-danger:         oklch(0.58 0.20 25);
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+}
 CSS
   ok "resources/css/app.css created"
 fi
+
+# The skeleton's welcome.blade.php loads `resources/js/app.js`, which this script
+# just stopped building when it switched the Vite entry to app.tsx. Left alone the
+# homepage 500s with "Unable to locate file in Vite manifest" and the default test
+# fails. Point the root route at a real Inertia page instead — that also proves the
+# whole stack works before a single feature is built.
+if [ ! -f resources/js/Pages/Welcome.tsx ]; then
+  mkdir -p resources/js/Pages
+  cat > resources/js/Pages/Welcome.tsx <<'WELCOME'
+import { Head } from '@inertiajs/react'
+
+export default function Welcome() {
+    return (
+        <>
+            <Head title="Welcome" />
+            <main className="min-h-screen bg-surface text-content flex items-center justify-center p-8">
+                <div className="max-w-prose space-y-3 text-center">
+                    <h1 className="text-2xl font-semibold">Inertia is wired up</h1>
+                    <p className="text-content-muted">
+                        Laravel, Filament, React and Tailwind are installed and talking to each
+                        other. Replace this page once the first slice is built.
+                    </p>
+                </div>
+            </main>
+        </>
+    )
+}
+WELCOME
+  ok "resources/js/Pages/Welcome.tsx created"
+fi
+
+ROUTEPATCH="$(mktemp)"
+cat > "$ROUTEPATCH" <<'PHP'
+<?php
+$f = 'routes/web.php';
+if (!is_file($f)) { exit(0); }
+$s = file_get_contents($f);
+if (str_contains($s, "Inertia::render('Welcome')")) { exit(0); }
+if (!str_contains($s, "view('welcome')")) { exit(4); }  // already customised — leave it alone
+$s = str_replace("view('welcome')", "Inertia::render('Welcome')", $s);
+if (!str_contains($s, 'use Inertia\Inertia;')) {
+    $s = preg_replace('/^(<\?php\s*\n)/', "$1\nuse Inertia\\Inertia;\n", $s, 1);
+}
+file_put_contents($f, $s);
+exit(0);
+PHP
+case "$(php "$ROUTEPATCH" >/dev/null 2>&1; echo $?)" in
+  0) ok "root route renders the Inertia Welcome page" ;;
+  4) ok "routes/web.php already customised — left untouched" ;;
+  *) warn "could not point '/' at an Inertia page; welcome.blade.php still loads app.js and will 500" ;;
+esac
+rm -f "$ROUTEPATCH"
 
 if [ ! -f tsconfig.json ]; then
   cat > tsconfig.json <<'TSCONFIG'
